@@ -6,7 +6,7 @@
 
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import type { AuthUser } from '../repository/UserRepository';
 import { UserRepository } from '../repository/UserRepository';
 import { AUTH_CONFIG } from '../../config/constants';

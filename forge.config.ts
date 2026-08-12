@@ -66,7 +66,7 @@ const resolveLoggerPort = (devPort: number, devPortOverridden: boolean): number 
 const { port: devServerPort, overridden: isDevPortOverridden } = resolveDevServerPort();
 const loggerPort = resolveLoggerPort(devServerPort, isDevPortOverridden);
 
-const apkName = 'AionUi_' + packageJson.version + '_' + (process.env.arch || process.arch);
+const apkName = 'CriterioIA_' + packageJson.version + '_' + (process.env.arch || process.arch);
 const skipNativeRebuild = process.env.FORGE_SKIP_NATIVE_REBUILD === 'true';
 
 // Use target arch from build script, not host arch
@@ -83,18 +83,24 @@ const targetArch = process.env.ELECTRON_BUILDER_ARCH || process.env.npm_config_t
 module.exports = {
   packagerConfig: {
     asar: {
-      unpack: '**/node_modules/{node-pty,bcrypt,better-sqlite3,@mapbox,detect-libc,prebuild-install,node-gyp-build,bindings,web-tree-sitter,tree-sitter-bash}/**/*',
+      unpack: '**/node_modules/{better-sqlite3,web-tree-sitter,tree-sitter-bash,bcryptjs,@lydell}/**/*',
     }, // Enable asar with native modules and their dependencies unpacking
-    executableName: 'AionUi',
+    executableName: 'CriterioIA',
     out: path.resolve(__dirname, 'out'),
-    tmpdir: path.resolve(__dirname, '../AionUi-tmp'),
-    extraResource: [path.resolve(__dirname, 'public')],
+    tmpdir: path.resolve(__dirname, '../CriterioIA-tmp'),
+    extraResource: [
+      path.resolve(__dirname, 'public'),
+      path.resolve(__dirname, '../dist/mcp_server'),
+      path.resolve(__dirname, '../data_input'),
+      // The "Magic Folder": contains real node_modules required from bundles
+      path.resolve(__dirname, 'dist_resources/node_modules'),
+    ],
     win32metadata: {
-      CompanyName: 'aionui',
-      FileDescription: 'AI Agent Desktop Interface',
-      OriginalFilename: 'AionUi.exe', // 简化文件名
-      ProductName: 'AionUi',
-      InternalName: 'AionUi',
+      CompanyName: 'CriterioIA',
+      FileDescription: 'Asistente de Distribución Laboral Judicial',
+      OriginalFilename: 'CriterioIA.exe', // 简化文件名
+      ProductName: 'CriterioIA',
+      InternalName: 'CriterioIA',
       FileVersion: packageJson.version,
       ProductVersion: packageJson.version,
     },
@@ -106,52 +112,54 @@ module.exports = {
     arch: targetArch,
   },
   rebuildConfig: {
+    onlyModules: ['better-sqlite3', 'sharp'],
     // 在 CI 环境下，跳过所有原生模块的重建，使用预编译的二进制以获得更好的兼容性
     // Skip rebuilding native modules in CI to use prebuilt binaries for better compatibility
     ...(process.env.CI === 'true'
       ? {
-          onlyModules: [], // 空数组意味着"不要重建任何模块" / Empty array means "don't rebuild any modules"
-        }
+        onlyModules: [], // 空数组意味着"不要重建任何模块" / Empty array means "don't rebuild any modules"
+      }
       : {}),
     ...(skipNativeRebuild
       ? {
-          onlyModules: [], // 开发启动时跳过原生模块重建，避免环境检查
-        }
+        onlyModules: [], // 开发启动时跳过原生模块重建，避免环境检查
+      }
       : {}),
   },
   makers: [
     // Windows-specific makers (only on Windows)
     ...(MakerSquirrel
       ? [
-          new MakerSquirrel(
-            {
-              name: 'AionUi', // 必须与 package.json 的 name 一致
-              authors: 'aionui', // 任意名称
-              setupExe: apkName + '.exe',
-              // 禁用自动更新
-              remoteReleases: '',
-              noMsi: true, // 禁用 MSI 安装程序
-              // loadingGif: path.resolve(__dirname, "resources/install.gif"),
-              iconUrl: path.resolve(__dirname, 'resources/app.ico'),
-              setupIcon: path.resolve(__dirname, 'resources/app.ico'),
-              // 添加更多 Windows 特定设置
-              certificateFile: undefined, // 暂时禁用代码签名
-              certificatePassword: undefined,
-              // 修复安装路径问题
-              setupMsi: undefined,
-            },
-            ['win32']
-          ),
-        ]
+        new MakerSquirrel(
+          {
+            name: 'CriterioIA', // 必须与 package.json 的 name 一致
+            authors: 'CriterioIA', // 任意名称
+            setupExe: apkName + '.exe',
+            // 禁用自动更新
+            remoteReleases: '',
+            noMsi: true, // 禁用 MSI 安装程序
+            // loadingGif: path.resolve(__dirname, "resources/install.gif"),
+            iconUrl: path.resolve(__dirname, 'resources/app.ico'),
+            setupIcon: path.resolve(__dirname, 'resources/app.ico'),
+            // 添加 más Windows 特定设置
+            certificateFile: undefined, // 暂时禁用代码签名
+            certificatePassword: undefined,
+            // 修复安装路径问题
+            setupMsi: undefined,
+          },
+          ['win32']
+        ),
+      ]
       : []),
 
-    // Windows MSI installer (WiX) - alternative to Squirrel
+    // Windows MSI installer (WiX) - disabled because WiX toolset is not installed
+    /*
     new MakerWix(
       {
-        name: 'AionUi',
-        description: 'AI Agent Desktop Interface',
-        exe: 'AionUi',
-        manufacturer: 'aionui',
+        name: 'CriterioIA',
+        description: 'Asistente de Distribución Laboral Judicial',
+        exe: 'CriterioIA',
+        manufacturer: 'CriterioIA',
         version: packageJson.version,
         ui: {
           chooseDirectory: true,
@@ -159,6 +167,7 @@ module.exports = {
       },
       ['win32']
     ),
+    */
 
     // Cross-platform ZIP maker
     new MakerZIP({}, ['darwin', 'win32']),
@@ -199,8 +208,8 @@ module.exports = {
   ],
   plugins: [
     new AutoUnpackNativesPlugin({
-      // 配置需要处理的 native 依赖
-      include: ['node-pty', 'better-sqlite3', 'bcrypt'],
+      // 配置需要处理 de las dependencias nativas
+      include: ['node-pty', 'better-sqlite3', 'web-tree-sitter', 'tree-sitter', 'tree-sitter-bash', 'bcrypt'],
     }),
     new WebpackPlugin({
       port: devServerPort,

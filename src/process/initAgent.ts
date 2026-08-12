@@ -56,12 +56,12 @@ const buildWorkspaceWidthFiles = async (defaultWorkspaceName: string, workspace?
   return { workspace, customWorkspace };
 };
 
-export const createGeminiAgent = async (model: TProviderWithModel, workspace?: string, defaultFiles?: string[], webSearchEngine?: 'google' | 'default'): Promise<TChatConversation> => {
+export const createGeminiAgent = async (model: TProviderWithModel, workspace?: string, defaultFiles?: string[], webSearchEngine?: 'google' | 'default', isDevAgent?: boolean): Promise<TChatConversation> => {
   const { workspace: newWorkspace, customWorkspace } = await buildWorkspaceWidthFiles(`gemini-temp-${Date.now()}`, workspace, defaultFiles);
   return {
     type: 'gemini',
     model,
-    extra: { workspace: newWorkspace, customWorkspace, webSearchEngine },
+    extra: { workspace: newWorkspace, customWorkspace, webSearchEngine, isDevAgent },
     desc: customWorkspace ? newWorkspace : '临时工作区',
     createTime: Date.now(),
     modifyTime: Date.now(),
@@ -82,6 +82,7 @@ export const createAcpAgent = async (options: ICreateConversationParams): Promis
       cliPath: extra.cliPath,
       agentName: extra.agentName,
       customAgentId: extra.customAgentId,
+      isDevAgent: extra.isDevAgent,
     },
     createTime: Date.now(),
     modifyTime: Date.now(),

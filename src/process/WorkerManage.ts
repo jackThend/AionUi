@@ -36,6 +36,9 @@ const buildConversation = (conversation: TChatConversation) => {
           workspace: conversation.extra.workspace,
           conversation_id: conversation.id,
           webSearchEngine: conversation.extra.webSearchEngine,
+          // CriterioIA: propaga la bandera del agente programador (portal). Cuando es true,
+          // el manager adjunta el servidor MCP dev-tools y usa el prompt del programador.
+          isDevAgent: conversation.extra.isDevAgent,
         },
         conversation.model
       );

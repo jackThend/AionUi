@@ -6,6 +6,20 @@
 
 import { app } from 'electron';
 
+// CriterioIA: Native module resolution fix for production
+// MUST RUN BEFORE ANY OTHER IMPORTS ARE EVALUATED
+if (app.isPackaged) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Module = require('module');
+  if (Module.globalPaths && Array.isArray(Module.globalPaths)) {
+    // Add process.resourcesPath so Node can find modules in the resources/ folder
+    Module.globalPaths.push(process.resourcesPath);
+    // Also check standard node_modules if needed (shouldn't be necessary but safe)
+    const extraModulesPath = (require('path')).join(process.resourcesPath, 'node_modules');
+    Module.globalPaths.push(extraModulesPath);
+  }
+}
+
 // Configure Chromium command-line flags for WebUI and CLI modes
 // 为 WebUI 和 CLI 模式配置 Chromium 命令行参数
 

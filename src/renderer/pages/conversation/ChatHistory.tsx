@@ -116,7 +116,10 @@ const ChatHistory: React.FC<{ onSessionClick?: () => void; collapsed?: boolean }
         .invoke({ page: 0, pageSize: 10000 })
         .then((history) => {
           if (history && Array.isArray(history) && history.length > 0) {
-            const sortedHistory = history.sort((a, b) => getActivityTime(b) - getActivityTime(a));
+            // CriterioIA: las conversaciones del agente programador (extra.isDevAgent) viven
+            // solo en el portal; no deben aparecer en el sidebar de la app judicial.
+            const judicialOnly = history.filter((c) => !(c.extra as { isDevAgent?: boolean })?.isDevAgent);
+            const sortedHistory = judicialOnly.sort((a, b) => getActivityTime(b) - getActivityTime(a));
             setChatHistory(sortedHistory);
           } else {
             setChatHistory([]);

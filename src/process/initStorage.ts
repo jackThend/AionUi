@@ -12,6 +12,7 @@ import type { IChatConversationRefer, IConfigStorageRefer, IEnvStorageRefer, IMc
 import { ChatMessageStorage, ChatStorage, ConfigStorage, EnvStorage } from '../common/storage';
 import { copyDirectoryRecursively, getConfigPath, getDataPath, getTempPath, verifyDirectoryFiles } from './utils';
 import { getDatabase } from './database/export';
+import { getJudicialMcpServerDescriptor } from './services/mcpServices/judicialMcpDescriptor';
 // Platform and architecture types (moved from deleted updateConfig)
 type PlatformType = 'win32' | 'darwin' | 'linux';
 type ArchitectureType = 'x64' | 'arm64' | 'ia32' | 'arm';
@@ -339,6 +340,51 @@ const getDefaultMcpServers = (): IMcpServer[] => {
   }));
 };
 
+/**
+ * CriterioIA: Asegura que el servidor MCP judicial exista en el registro genérico
+ * mcp.config, para que sea visible/sincronizable desde Settings > MCP Management
+ * a cualquier backend (Claude, Qwen, iFlow, Codex, OpenCode), no sólo a Gemini.
+ * Idempotente: no toca la lista si la entrada ya existe (por nombre).
+ */
+const ensureJudicialMcpServerSeeded = (existingServers: IMcpServer[]): IMcpServer[] => {
+  const descriptor = getJudicialMcpServerDescriptor();
+  if (existingServers.some((server) => server.name === descriptor.name)) {
+    return existingServers;
+  }
+
+  const now = Date.now();
+  const seededServer: IMcpServer = {
+    id: `mcp_judicial_${now}`,
+    name: descriptor.name,
+    description: descriptor.description,
+    enabled: true, // habilitado por defecto: es la unica herramienta que usa este fork
+    transport: {
+      type: 'stdio',
+      command: descriptor.command,
+      args: descriptor.args,
+      env: descriptor.env,
+    },
+    createdAt: now,
+    updatedAt: now,
+    originalJson: JSON.stringify(
+      {
+        mcpServers: {
+          [descriptor.name]: {
+            command: descriptor.command,
+            args: descriptor.args,
+            env: descriptor.env,
+            description: descriptor.description,
+          },
+        },
+      },
+      null,
+      2
+    ),
+  };
+
+  return [...existingServers, seededServer];
+};
+
 const initStorage = async () => {
   console.log('[AionUi] Starting storage initialization...');
 
@@ -362,12 +408,20 @@ const initStorage = async () => {
   // 4. 初始化 MCP 配置（为所有用户提供默认配置）
   try {
     const existingMcpConfig = await configFile.get('mcp.config').catch((): undefined => undefined);
+    const currentServers: IMcpServer[] = Array.isArray(existingMcpConfig) ? existingMcpConfig : [];
 
-    // 仅当配置不存在或为空时，写入默认值（适用于新用户和老用户）
-    if (!existingMcpConfig || !Array.isArray(existingMcpConfig) || existingMcpConfig.length === 0) {
-      const defaultServers = getDefaultMcpServers();
-      await configFile.set('mcp.config', defaultServers);
+    // 仅当配置不存在或为空时, escribir los valores por defecto (nuevos usuarios)
+    let nextServers = currentServers;
+    if (currentServers.length === 0) {
+      nextServers = getDefaultMcpServers();
       console.log('[AionUi] Default MCP servers initialized');
+    }
+
+    // CriterioIA: asegurar la entrada del servidor judicial (idempotente, para usuarios nuevos y viejos)
+    const seededServers = ensureJudicialMcpServerSeeded(nextServers);
+
+    if (seededServers !== currentServers) {
+      await configFile.set('mcp.config', seededServers);
     }
   } catch (error) {
     console.error('[AionUi] Failed to initialize default MCP servers:', error);

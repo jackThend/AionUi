@@ -20,6 +20,8 @@ import { loadSettings } from './cli/settings';
 import { ConversationToolConfig } from './cli/tools/conversation-tool-config';
 import { mapToDisplay, type TrackedToolCall } from './cli/useReactToolScheduler';
 import { getPromptCount, handleCompletedTools, processGeminiStreamEvents, startNewPrompt } from './utils';
+import { JUDICIAL_SYSTEM_PROMPT } from '@/agent/prompts/judicialPrompt';
+import { logger } from '../../common/productionLogger';
 
 // Global registry for current agent instance (used by flashFallbackHandler)
 let currentGeminiAgent: GeminiAgent | null = null;
@@ -80,9 +82,11 @@ export class GeminiAgent {
       webSearchEngine: this.webSearchEngine,
     });
 
-    // Register as current agent for flashFallbackHandler access
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
     currentGeminiAgent = this;
+
+    // CriterioIA: Use centralized judicial prompt (shared with all backends)
+    // Import is at top of file
+    this.historyPrefix = JUDICIAL_SYSTEM_PROMPT;
 
     this.bootstrap = this.initialize();
   }
@@ -348,7 +352,7 @@ export class GeminiAgent {
     }
   }
 
-  submitQuery(
+  private submitQuery(
     query: unknown,
     msg_id: string,
     abortController: AbortController,
@@ -357,15 +361,17 @@ export class GeminiAgent {
       isContinuation?: boolean;
     }
   ): string | undefined {
+    const requestId = uuid(12);
+    logger.info('GeminiAgent: submitQuery START.', { requestId, msg_id });
     try {
       let prompt_id = options?.prompt_id;
       if (!prompt_id) {
-        prompt_id = this.config.getSessionId() + '########' + getPromptCount();
+        prompt_id = this.config!.getSessionId() + '########' + getPromptCount();
       }
       if (!options?.isContinuation) {
         startNewPrompt();
       }
-      const stream = this.geminiClient.sendMessageStream(query, abortController.signal, prompt_id);
+      const stream = this.geminiClient!.sendMessageStream(query, abortController.signal, prompt_id);
       this.onStreamEvent({
         type: 'start',
         data: '',
@@ -374,6 +380,7 @@ export class GeminiAgent {
       this.handleMessage(stream, msg_id, abortController)
         .catch((e: unknown) => {
           const errorMessage = e instanceof Error ? e.message : JSON.stringify(e);
+          logger.error('GeminiAgent: handleMessage Error:', errorMessage);
           this.onStreamEvent({
             type: 'error',
             data: errorMessage,
@@ -387,18 +394,22 @@ export class GeminiAgent {
             msg_id,
           });
         });
-      return '';
+      return requestId;
     } catch (e) {
+      logger.error('GeminiAgent: submitQuery CRASH:', e);
       this.onStreamEvent({
         type: 'error',
         data: e.message,
         msg_id,
       });
+      return undefined;
     }
   }
 
   async send(message: string | Array<{ text: string }>, msg_id = '') {
+    logger.info('GeminiAgent: send() called.', { msg_id });
     await this.bootstrap;
+    logger.info('GeminiAgent: bootstrap ready, processing query...');
     const abortController = this.createAbortController();
     // Prepend one-time history prefix before processing commands
     if (this.historyPrefix && !this.historyUsedOnce) {
@@ -417,7 +428,7 @@ export class GeminiAgent {
 
     const { processedQuery, shouldProceed } = await handleAtCommand({
       query: Array.isArray(message) ? message[0].text : message,
-      config: this.config,
+      config: this.config!,
       addItem: (item: unknown) => {
         // Capture error messages from @ command processing
         if (item && typeof item === 'object' && 'type' in item) {
@@ -436,7 +447,7 @@ export class GeminiAgent {
 
     if (!shouldProceed || processedQuery === null || abortController.signal.aborted) {
       // Send error message to user if @ command processing failed
-      // 如果 @ 命令处理失败，向用户发送错误消息
+      // 如果 @ 命令处理失败，向用户发送 error 消息
       if (atCommandError) {
         this.onStreamEvent({
           type: 'error',
@@ -460,6 +471,7 @@ export class GeminiAgent {
       return;
     }
     const requestId = this.submitQuery(processedQuery, msg_id, abortController);
+    logger.info('GeminiAgent: submitQuery returned requestId.', { requestId });
     return requestId;
   }
   stop(): void {
@@ -469,8 +481,8 @@ export class GeminiAgent {
   async injectConversationHistory(text: string): Promise<void> {
     try {
       if (!this.config || !this.workspace || !this.settings) return;
-      // Prepare one-time prefix for first outgoing message after (re)start
-      this.historyPrefix = `Conversation history (recent):\n${text}\n\n`;
+
+      this.historyPrefix = `${JUDICIAL_SYSTEM_PROMPT}\n\nConversation history (recent):\n${text}\n\n`;
       this.historyUsedOnce = false;
       // 使用 refreshServerHierarchicalMemory 刷新 memory，然后追加聊天历史
       // Use refreshServerHierarchicalMemory to refresh memory, then append chat history

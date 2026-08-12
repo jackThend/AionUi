@@ -16,6 +16,9 @@ import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { AcpConnection } from './AcpConnection';
+import { wrapWithJudicialContext, shouldUseCompactPrompt } from '@/agent/prompts/judicialPrompt';
+import { wrapWithDevAgentContext } from '@/agent/prompts/devAgentPrompt';
+import { getDevToolsMcpServerDescriptor } from '@/process/services/mcpServices/devToolsMcpDescriptor';
 
 /**
  * Initialize response result interface
@@ -54,6 +57,7 @@ export interface AcpAgentConfig {
   workingDir: string;
   customArgs?: string[]; // Custom CLI arguments (for custom backend)
   customEnv?: Record<string, string>; // Custom environment variables (for custom backend)
+  isDevAgent?: boolean; // CriterioIA: conversacion del agente programador del portal
   extra?: {
     workspace?: string;
     backend: AcpBackend;
@@ -88,8 +92,14 @@ export class AcpAgent {
   // 跟踪待处理的导航工具调用，以便从结果中提取 URL
   private pendingNavigationTools = new Set<string>();
 
+  // CriterioIA: Track if judicial context has been injected in this session
+  private hasInjectedContext: boolean = false;
+  // CriterioIA: true si esta conversacion es del agente programador del portal.
+  private readonly isDevAgent: boolean;
+
   constructor(config: AcpAgentConfig) {
     this.id = config.id;
+    this.isDevAgent = config.isDevAgent === true;
     this.onStreamEvent = config.onStreamEvent;
     this.onSignalEvent = config.onSignalEvent;
     this.extra = config.extra || {
@@ -168,9 +178,28 @@ export class AcpAgent {
       await this.performAuthentication();
       // 避免重复创建会话：仅当尚无活动会话时再创建
       if (!this.connection.hasActiveSession) {
-        await this.connection.newSession(this.extra.workspace);
+        // CriterioIA: el agente programador del portal recibe ademas el servidor MCP
+        // dev-tools, pasado explicitamente aca (nunca via el registro global mcp.config),
+        // para que el chat judicial normal jamas lo vea.
+        const extraMcpServers = this.isDevAgent
+          ? (() => {
+              const dev = getDevToolsMcpServerDescriptor();
+              return [
+                {
+                  name: dev.name,
+                  command: dev.command,
+                  args: dev.args,
+                  env: Object.entries(dev.env).map(([name, value]) => ({ name, value })),
+                },
+              ];
+            })()
+          : undefined;
+        await this.connection.newSession(this.extra.workspace, extraMcpServers);
       }
       this.emitStatusMessage('session_active');
+
+      // CriterioIA: Reset context injection for new session
+      this.hasInjectedContext = false;
     } catch (error) {
       this.emitStatusMessage('error');
       throw error;
@@ -195,11 +224,26 @@ export class AcpAgent {
       this.adapter.resetMessageTracking();
       let processedContent = data.content;
 
+      // CriterioIA: inyecta el contexto correcto segun el tipo de agente. El agente
+      // programador del portal usa su prompt aislado; el resto, el judicial.
+      if (this.isDevAgent) {
+        processedContent = wrapWithDevAgentContext(processedContent, !this.hasInjectedContext);
+      } else {
+        const useCompact = shouldUseCompactPrompt(this.extra.backend);
+        processedContent = wrapWithJudicialContext(processedContent, !this.hasInjectedContext, useCompact);
+      }
+      if (!this.hasInjectedContext) {
+        this.hasInjectedContext = true;
+      }
+
       // Process @ file references in the message
       // 处理消息中的 @ 文件引用
       processedContent = await this.processAtFileReferences(processedContent, data.files);
 
       await this.connection.sendPrompt(processedContent);
+      // Turno terminado: forzar el flush final del buffer de streaming para este
+      // mensaje antes de que el proximo sendMessage() genere un nuevo currentMessageId.
+      this.adapter.finalizeCurrentMessage();
       this.statusMessageId = null;
       return { success: true, data: null };
     } catch (error) {

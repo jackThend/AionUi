@@ -8,6 +8,7 @@ import { acpDetector } from '@/agent/acp/AcpDetector';
 import { initAcpConversationBridge } from './acpConversationBridge';
 import { initApplicationBridge } from './applicationBridge';
 import { initAuthBridge } from './authBridge';
+import { initBusinessRulesBridge } from './businessRulesBridge';
 import { initCodexConversationBridge } from './codexConversationBridge';
 import { initConversationBridge } from './conversationBridge';
 import { initDocumentBridge } from './documentBridge';
@@ -39,6 +40,7 @@ export function initAllBridges(): void {
   initAcpConversationBridge();
   initCodexConversationBridge();
   initAuthBridge();
+  initBusinessRulesBridge();
   initModelBridge();
   initMcpBridge();
   initDatabaseBridge();
@@ -59,6 +61,6 @@ export async function initializeAcpDetector(): Promise<void> {
 }
 
 // 导出初始化函数供单独使用
-export { initAcpConversationBridge, initApplicationBridge, initAuthBridge, initCodexConversationBridge, initConversationBridge, initDatabaseBridge, initDialogBridge, initDocumentBridge, initFsBridge, initGeminiBridge, initGeminiConversationBridge, initMcpBridge, initModelBridge, initPreviewHistoryBridge, initShellBridge, initWindowControlsBridge };
+export { initAcpConversationBridge, initApplicationBridge, initAuthBridge, initBusinessRulesBridge, initCodexConversationBridge, initConversationBridge, initDatabaseBridge, initDialogBridge, initDocumentBridge, initFsBridge, initGeminiBridge, initGeminiConversationBridge, initMcpBridge, initModelBridge, initPreviewHistoryBridge, initShellBridge, initWindowControlsBridge };
 // 导出窗口控制相关工具函数
 export { registerWindowMaximizeListeners } from './windowControlsBridge';

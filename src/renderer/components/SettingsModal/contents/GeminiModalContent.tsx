@@ -11,6 +11,7 @@ import { useThemeContext } from '@/renderer/context/ThemeContext';
 import { Button, Divider, Form, Input, Message, Switch } from '@arco-design/web-react';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import classNames from 'classnames';
 import { useSettingsViewMode } from '../settingsViewContext';
 
@@ -22,6 +23,7 @@ interface GeminiModalContentProps {
 const GeminiModalContent: React.FC<GeminiModalContentProps> = ({ onRequestClose }) => {
   const { t } = useTranslation();
   const { theme } = useThemeContext();
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [googleAccountLoading, setGoogleAccountLoading] = useState(false);
@@ -101,6 +103,20 @@ const GeminiModalContent: React.FC<GeminiModalContentProps> = ({ onRequestClose 
       <AionScrollArea className='flex-1 min-h-0' disableOverflow={isPageMode}>
         <div className='space-y-16px'>
           <div className='px-[12px] py-[24px] md:px-[32px] bg-2 rd-12px md:rd-16px border border-border-2'>
+            <div className='mb-16px text-14px text-t-secondary'>
+              {t('settings.geminiApiKeyHint')}{' '}
+              <span
+                className='cursor-pointer'
+                style={{ color: 'rgb(var(--primary-6))' }}
+                onClick={() => {
+                  Promise.resolve(navigate('/settings/model')).catch((error) => {
+                    console.error('Navigation failed:', error);
+                  });
+                }}
+              >
+                {t('settings.geminiApiKeyHintLink')}
+              </span>
+            </div>
             <Form form={form} layout='horizontal' labelCol={{ flex: '140px' }} labelAlign='left' wrapperCol={{ flex: '1' }}>
               <Form.Item label={t('settings.personalAuth')} field='googleAccount' layout='horizontal'>
                 {(props) => (

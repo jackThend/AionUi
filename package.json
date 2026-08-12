@@ -1,11 +1,11 @@
 {
-  "name": "AionUi",
-  "productName": "AionUi",
-  "version": "1.6.6",
-  "description": "Transform your command-line AI agent into a modern, efficient AI Chat interface.",
+  "name": "CriterioIA",
+  "productName": "CriterioIA",
+  "version": "1.0.3",
+  "description": "Asistente Inteligente de Distribución Laboral Judicial.",
   "main": ".webpack/main",
   "scripts": {
-    "start": "cross-env electron-forge start",
+    "start": "cross-env NODE_OPTIONS=--max-old-space-size=4096 FORGE_SKIP_NATIVE_REBUILD=true electron-forge start",
     "cli": "cross-env electron-forge start --",
     "webui": "npm run cli -- --webui",
     "webui:remote": "npm run cli -- --webui --remote",
@@ -38,8 +38,8 @@
   },
   "keywords": [],
   "author": {
-    "name": "AionUi",
-    "email": "service@aionui.com"
+    "name": "CriterioIA",
+    "email": "contacto@criterioia.jud"
   },
   "license": "Apache-2.0",
   "devDependencies": {
@@ -88,8 +88,10 @@
     "mini-css-extract-plugin": "^2.9.2",
     "node-loader": "^2.1.0",
     "patch-package": "^8.0.0",
+    "png-to-ico": "^3.0.1",
     "postcss-loader": "^8.1.1",
     "prettier": "^3.6.2",
+    "sharp": "^0.34.5",
     "style-loader": "^3.3.4",
     "ts-jest": "^29.4.4",
     "ts-loader": "^9.5.2",
@@ -111,11 +113,11 @@
     "@monaco-editor/react": "^4.7.0",
     "@office-ai/aioncli-core": "^0.18.7",
     "@office-ai/platform": "^0.3.16",
-    "@types/bcrypt": "^6.0.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@uiw/codemirror-extensions-langs": "^4.25.1",
     "@uiw/react-codemirror": "^4.25.2",
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^2.4.3",
     "better-sqlite3": "^12.4.1",
     "buffer": "^6.0.3",
     "classnames": "^2.5.1",
@@ -123,6 +125,7 @@
     "cors": "^2.8.5",
     "diff2html": "^3.4.52",
     "docx": "^9.5.1",
+    "electron-context-menu": "^4.1.1",
     "electron-squirrel-startup": "^1.0.1",
     "electron-updater": "^6.6.2",
     "eventemitter3": "^5.0.1",
@@ -138,6 +141,7 @@
     "mammoth": "^1.11.0",
     "officeparser": "^5.2.2",
     "openai": "^5.12.2",
+    "opencode-ai": "^1.18.16",
     "pptx2json": "^0.0.10",
     "process": "^0.11.10",
     "react": "^19.1.0",
@@ -152,13 +156,13 @@
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "semver": "^7.7.2",
-    "sharp": "^0.34.3",
     "stream-browserify": "^3.0.0",
     "streamdown": "^1.5.1",
     "swr": "^2.3.6",
     "tiny-csrf": "^1.1.6",
     "turndown": "^7.2.2",
     "turndown-plugin-gfm": "^1.0.2",
+    "web-tree-sitter": "^0.26.5",
     "ws": "^8.18.3",
     "xlsx-republish": "^0.20.3",
     "zod": "^3.25.76"
@@ -167,7 +171,11 @@
     "electron-winstaller": "^5.4.0"
   },
   "electronRebuild": {
-    "electronVersion": "^37.3.1"
+    "electronVersion": "^37.3.1",
+    "onlyModules": [
+      "better-sqlite3",
+      "sharp"
+    ]
   },
   "overrides": {
     "webpack-dev-server": "^5.2.2",

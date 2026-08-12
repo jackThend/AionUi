@@ -13,6 +13,7 @@ import { MenuFold, MenuUnfold } from '@icon-park/react';
 import classNames from 'classnames';
 import React, { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import logo from './assets/logo.png';
 import { LayoutContext } from './context/LayoutContext';
 import { useDirectorySelection } from './hooks/useDirectorySelection';
 import { useMultiAgentDetection } from './hooks/useMultiAgentDetection';
@@ -186,15 +187,15 @@ const Layout: React.FC<{
             style={
               isMobile
                 ? {
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    height: '100vh',
-                    zIndex: 100,
-                    transform: collapsed ? 'translateX(-100%)' : 'translateX(0)',
-                    transition: 'none',
-                    pointerEvents: collapsed ? 'none' : 'auto',
-                  }
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  height: '100vh',
+                  zIndex: 100,
+                  transform: collapsed ? 'translateX(-100%)' : 'translateX(0)',
+                  transition: 'none',
+                  pointerEvents: collapsed ? 'none' : 'auto',
+                }
                 : undefined
             }
           >
@@ -204,24 +205,23 @@ const Layout: React.FC<{
               })}
             >
               <div
-                className={classNames('bg-black shrink-0 size-40px relative rd-0.5rem', {
+                className={classNames('shrink-0 size-40px relative rd-0.5rem flex items-center justify-center', {
                   '!size-24px': collapsed,
                 })}
                 onClick={onClick}
               >
-                <svg
-                  className={classNames('w-5.5 h-5.5 absolute inset-0 m-auto', {
-                    ' scale-140': !collapsed,
+                <img
+                  src={logo}
+                  className={classNames('w-8 h-8 object-contain', {
+                    'w-6 h-6': collapsed
                   })}
-                  viewBox='0 0 80 80'
-                  fill='none'
-                >
-                  <path key='logo-path-1' d='M40 20 Q38 22 25 40 Q23 42 26 42 L30 42 Q32 40 40 30 Q48 40 50 42 L54 42 Q57 42 55 40 Q42 22 40 20' fill='white'></path>
-                  <circle key='logo-circle' cx='40' cy='46' r='3' fill='white'></circle>
-                  <path key='logo-path-2' d='M18 50 Q40 70 62 50' stroke='white' strokeWidth='3.5' fill='none' strokeLinecap='round'></path>
-                </svg>
+                  alt="Logo"
+                />
               </div>
-              <div className=' flex-1 text-20px collapsed-hidden font-bold'>AionUi</div>
+              <div className='flex-1 flex flex-col justify-center collapsed-hidden'>
+                <div className='text-18px font-bold leading-tight'>CriterioIA</div>
+                <div className='text-10px opacity-70 tracking-wider'>GESTIÓN JUDICIAL</div>
+              </div>
               {isMobile && !collapsed && (
                 <button type='button' className='app-titlebar__button' onClick={() => setCollapsed(true)} aria-label='Collapse sidebar'>
                   {collapsed ? <MenuUnfold theme='outline' size='18' fill='currentColor' /> : <MenuFold theme='outline' size='18' fill='currentColor' />}
@@ -232,11 +232,11 @@ const Layout: React.FC<{
             <ArcoLayout.Content className='h-[calc(100%-72px-16px)] p-8px layout-sider-content'>
               {React.isValidElement(sider)
                 ? React.cloneElement(sider, {
-                    onSessionClick: () => {
-                      if (isMobile) setCollapsed(true);
-                    },
-                    collapsed,
-                  } as any)
+                  onSessionClick: () => {
+                    if (isMobile) setCollapsed(true);
+                  },
+                  collapsed,
+                } as any)
                 : sider}
             </ArcoLayout.Content>
           </ArcoLayout.Sider>
@@ -249,8 +249,8 @@ const Layout: React.FC<{
             style={
               isMobile
                 ? {
-                    width: '100vw',
-                  }
+                  width: '100vw',
+                }
                 : undefined
             }
           >

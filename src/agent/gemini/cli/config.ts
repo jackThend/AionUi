@@ -7,6 +7,7 @@
 import type { TelemetryTarget, GeminiCLIExtension, FallbackIntent } from '@office-ai/aioncli-core';
 import { ApprovalMode, Config, DEFAULT_GEMINI_EMBEDDING_MODEL, DEFAULT_GEMINI_MODEL, DEFAULT_MEMORY_FILE_FILTERING_OPTIONS, FileDiscoveryService, getCurrentGeminiMdFilename, loadServerHierarchicalMemory, setGeminiMdFilename as setServerGeminiMdFilename, SimpleExtensionLoader } from '@office-ai/aioncli-core';
 import process from 'node:process';
+import path from 'node:path';
 import type { Settings } from './settings';
 import { annotateActiveExtensions } from './extension';
 import { getCurrentGeminiAgent } from '../index';
@@ -77,12 +78,9 @@ export async function loadCliConfig({ workspace, settings, extensions, sessionId
   // TODO(b/343434939): This is a bit of a hack. The contextFileName should ideally be passed
   // directly to the Config constructor in core, and have core handle setGeminiMdFilename.
   // However, loadHierarchicalGeminiMemory is called *before* createServerConfig.
-  if (settings.contextFileName) {
-    setServerGeminiMdFilename(settings.contextFileName);
-  } else {
-    // Reset to default if not provided in settings.
-    setServerGeminiMdFilename(getCurrentGeminiMdFilename());
-  }
+  // Force Judicial Prompt
+  const judicialPrompt = path.join(workspace, 'prompts', 'system_prompt.md');
+  setServerGeminiMdFilename(judicialPrompt);
 
   const fileService = new FileDiscoveryService(workspace);
 

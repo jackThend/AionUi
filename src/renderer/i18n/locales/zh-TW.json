@@ -143,8 +143,8 @@
     "deleteFailed": "刪除失敗"
   },
   "login": {
-    "pageTitle": "AionUi - 登入",
-    "brand": "AionUi",
+    "pageTitle": "CriterioIA - 登入",
+    "brand": "CriterioIA",
     "subtitle": "歡迎回來，請登入您的帳號",
     "username": "使用者名稱",
     "usernamePlaceholder": "請輸入使用者名稱",
@@ -476,7 +476,7 @@
     "mcpImportSuccess": "匯入成功",
     "mcpImportFailed": "匯入失敗",
     "mcpJsonInvalid": "無效的 JSON 格式",
-    "mcpImportDescription": "AionUi會自動獲取的您在CLI Agent中已安裝的MCP，並一鍵匯入",
+    "mcpImportDescription": "CriterioIA會自動獲取的您在CLI Agent中已安裝的MCP，並一鍵匯入",
     "mcpStepSelectAgent": "選擇Agent",
     "mcpStepFetchTools": "獲取mcp",
     "mcpStepImportSuccess": "匯入成功",

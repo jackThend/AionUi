@@ -165,16 +165,6 @@ const Guid: React.FC = () => {
   const [availableAgents, setAvailableAgents] = useState<Array<{ backend: AcpBackend; name: string; cliPath?: string; customAgentId?: string }>>();
 
   /**
-   * 获取代理的唯一选择键
-   * 对于自定义代理返回 "custom:uuid"，其他代理返回 backend 类型
-   * Helper to get agent key for selection
-   * Returns "custom:uuid" for custom agents, backend type for others
-   */
-  const getAgentKey = (agent: { backend: AcpBackend; customAgentId?: string }) => {
-    return agent.backend === 'custom' && agent.customAgentId ? `custom:${agent.customAgentId}` : agent.backend;
-  };
-
-  /**
    * 通过选择键查找代理
    * 支持 "custom:uuid" 格式和普通 backend 类型
    * Helper to find agent by key
@@ -284,6 +274,22 @@ const Guid: React.FC = () => {
       setAvailableAgents(availableAgentsData);
     }
   }, [availableAgentsData]);
+
+  // CriterioIA: cargar el proveedor de IA por defecto configurado en Settings al montar.
+  // Antes selectedAgentKey siempre arrancaba en 'gemini' (useState puramente en memoria),
+  // sin importar lo que el usuario hubiera elegido antes -- ahora Settings > Proveedor de
+  // IA es la unica fuente de verdad persistente.
+  useEffect(() => {
+    ConfigStorage.get('app.defaultBackend')
+      .then((value) => {
+        if (value?.agentKey) {
+          setSelectedAgentKey(value.agentKey);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load default backend:', error);
+      });
+  }, []);
 
   const handleSend = async () => {
     // 默认情况使用 Gemini（参考 main 分支的纯粹逻辑）
@@ -488,59 +494,50 @@ const Guid: React.FC = () => {
   return (
     <ConfigProvider getPopupContainer={() => guidContainerRef.current || document.body}>
       <div ref={guidContainerRef} className='h-full flex-center flex-col px-10px' style={{ position: 'relative' }}>
+        {/* CriterioIA: acceso discreto al portal del agente programador (seccion de
+            desarrollo, separada del uso judicial). Requiere escribir el nombre del proyecto. */}
+        <span
+          title='Portal de desarrollo'
+          onClick={() => {
+            Promise.resolve(navigate('/portal')).catch((error) => {
+              console.error('Navigation failed:', error);
+            });
+          }}
+          style={{ position: 'absolute', bottom: 8, right: 12, fontSize: 11, opacity: 0.35, cursor: 'pointer', userSelect: 'none' }}
+        >
+          ⌁ dev
+        </span>
         <div className={styles.guidLayout}>
           <p className={`text-2xl font-semibold mb-8 text-0 text-center`}>{t('conversation.welcome.title')}</p>
 
           {/* Agent 选择器 - 在标题下方 */}
-          {availableAgents && availableAgents.length > 0 && (
-            <div className='w-full flex justify-center'>
-              <div
-                className='inline-flex items-center bg-fill-2'
-                style={{
-                  marginBottom: 16,
-                  padding: '4px',
-                  borderRadius: '30px',
-                  transition: 'all 0.6s cubic-bezier(0.2, 0.8, 0.3, 1)',
-                  width: 'fit-content',
-                  gap: 0,
-                }}
-              >
-                {availableAgents.map((agent, index) => {
-                  const isSelected = selectedAgentKey === getAgentKey(agent);
-                  const logoSrc = AGENT_LOGO_MAP[agent.backend];
-
-                  return (
-                    <React.Fragment key={getAgentKey(agent)}>
-                      {index > 0 && <div className='text-white/30 text-16px lh-1 p-2px select-none'>|</div>}
-                      <div
-                        className={`group flex items-center cursor-pointer whitespace-nowrap overflow-hidden ${isSelected ? 'opacity-100 px-12px py-8px rd-20px mx-2px' : 'opacity-60 p-4px hover:opacity-100'}`}
-                        style={
-                          isSelected
-                            ? {
-                                transition: 'opacity 0.5s cubic-bezier(0.2, 0.8, 0.3, 1)',
-                                backgroundColor: 'var(--fill-0)',
-                              }
-                            : { transition: 'opacity 0.5s cubic-bezier(0.2, 0.8, 0.3, 1)' }
-                        }
-                        onClick={() => setSelectedAgentKey(getAgentKey(agent))}
-                      >
-                        {logoSrc ? <img src={logoSrc} alt={`${agent.backend} logo`} width={20} height={20} style={{ objectFit: 'contain', flexShrink: 0 }} /> : <Robot theme='outline' size={20} style={{ flexShrink: 0 }} />}
-                        <span
-                          className={`font-medium text-14px ${isSelected ? 'font-semibold' : 'max-w-0 opacity-0 overflow-hidden group-hover:max-w-100px group-hover:opacity-100 group-hover:ml-8px'}`}
-                          style={{
-                            color: 'var(--color-text-1)',
-                            transition: isSelected ? 'color 0.5s cubic-bezier(0.2, 0.8, 0.3, 1), font-weight 0.5s cubic-bezier(0.2, 0.8, 0.3, 1)' : 'max-width 0.6s cubic-bezier(0.2, 0.8, 0.3, 1), opacity 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) 0.05s, margin 0.6s cubic-bezier(0.2, 0.8, 0.3, 1)',
-                          }}
-                        >
-                          {agent.name}
-                        </span>
-                      </div>
-                    </React.Fragment>
-                  );
-                })}
+          {/* CriterioIA: solo se MUESTRA el proveedor activo -- cambiarlo pasa siempre por
+              Settings > Proveedor de IA, no hay selector alternativo aca (antes era una fila
+              de iconos con texto de ancho 0 hasta el hover, dificil de usar). */}
+          {(() => {
+            const currentAgentInfo = selectedAgentKey === 'gemini' ? undefined : findAgentByKey(selectedAgentKey);
+            const displayName = selectedAgentKey === 'gemini' ? 'Gemini' : currentAgentInfo?.name || selectedAgent;
+            const logoSrc = selectedAgentKey === 'gemini' ? GeminiLogo : AGENT_LOGO_MAP[currentAgentInfo?.backend as AcpBackend];
+            return (
+              <div className='w-full flex justify-center'>
+                <div className='inline-flex items-center gap-8px' style={{ marginBottom: 16 }}>
+                  {logoSrc ? <img src={logoSrc} alt={`${displayName} logo`} width={18} height={18} style={{ objectFit: 'contain' }} /> : <Robot theme='outline' size={18} />}
+                  <span className='text-14px text-t-secondary'>{t('conversation.welcome.usingProvider', { provider: displayName })}</span>
+                  <span
+                    className='text-14px cursor-pointer'
+                    style={{ color: 'rgb(var(--primary-6))' }}
+                    onClick={() => {
+                      Promise.resolve(navigate('/settings/agent')).catch((error) => {
+                        console.error('Navigation failed:', error);
+                      });
+                    }}
+                  >
+                    {t('conversation.welcome.changeProvider')}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div
             className={`${styles.guidInputCard} bg-border-2 b-solid border rd-20px transition-all duration-200 overflow-hidden p-16px bg-[var(--fill-0)] ${isFileDragging ? 'border-dashed' : 'border-3'}`}

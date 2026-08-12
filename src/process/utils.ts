@@ -53,7 +53,7 @@ export async function readDirectoryRecursive(
   }
 ): Promise<IDirOrFile> {
   const { root = dirPath, maxDepth = 1, fileService, search, abortController } = options || {};
-  const { text: searchText, onProcess: onSearchProcess = () => {}, process = { file: 0, dir: 1 } } = search || {};
+  const { text: searchText, onProcess: onSearchProcess = () => { }, process = { file: 0, dir: 1 } } = search || {};
 
   const matchSearch = searchText ? (fullPath: string) => fullPath.includes(searchText) : (_: string) => false;
 
@@ -230,6 +230,9 @@ export async function verifyDirectoryFiles(dir1: string, dir2: string): Promise<
 
 export const copyFilesToDirectory = async (dir: string, files?: string[]) => {
   if (!files) return Promise.resolve();
+
+  // CriterioIA: Ensure destination directory exists
+  await fs.mkdir(dir, { recursive: true });
 
   const { cacheDir } = getSystemDir();
   const tempDir = path.join(cacheDir, 'temp');

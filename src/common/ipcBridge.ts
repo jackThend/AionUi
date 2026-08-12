@@ -54,6 +54,21 @@ export const application = {
 export const dialog = {
   showOpen: bridge.buildProvider<string[] | undefined, { defaultPath?: string; properties?: OpenDialogOptions['properties']; filters?: OpenDialogOptions['filters'] } | undefined>('show-open'), // 打开文件/文件夹选择窗口
 };
+
+// Reglas de negocio judiciales configurables (Settings > Reglas de Negocio).
+// Lee/escribe el mismo data_input/business_rules.json que consume backend/business_rules.py,
+// para que el administrador pueda ajustar estos parametros desde la UI o desde el chat
+// (update_business_rules_settings) indistintamente, con una sola fuente de verdad.
+export interface IBusinessRulesSettings {
+  despacho_minimo_ideal: number;
+  pfi_block_size: number;
+  min_judges_required: number;
+  juicio_min_per_judge: number;
+}
+export const businessRules = {
+  get: bridge.buildProvider<IBusinessRulesSettings, void>('business-rules.get'),
+  update: bridge.buildProvider<IBridgeResponse<IBusinessRulesSettings>, Partial<IBusinessRulesSettings>>('business-rules.update'),
+};
 export const fs = {
   getFilesByDir: bridge.buildProvider<Array<IDirOrFile>, { dir: string; root: string }>('get-file-by-dir'), // 获取指定文件夹下所有文件夹和文件列表
   getImageBase64: bridge.buildProvider<string, { path: string }>('get-image-base64'), // 获取图片base64
@@ -199,7 +214,7 @@ export interface ICreateConversationParams {
   id?: string;
   name?: string;
   model: TProviderWithModel;
-  extra: { workspace?: string; defaultFiles?: string[]; backend?: AcpBackend; cliPath?: string; webSearchEngine?: 'google' | 'default'; agentName?: string; customAgentId?: string };
+  extra: { workspace?: string; defaultFiles?: string[]; backend?: AcpBackend; cliPath?: string; webSearchEngine?: 'google' | 'default'; agentName?: string; customAgentId?: string; isDevAgent?: boolean };
 }
 interface IResetConversationParams {
   id?: string;

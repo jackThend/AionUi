@@ -6,6 +6,7 @@
 
 import type { IMessageAcpToolCall, IMessageText, TMessage } from '@/common/chatLib';
 import { uuid } from '@/common/utils';
+import { streamingBuffer } from '@/process/database/StreamingMessageBuffer';
 import type { AcpBackend, AcpSessionUpdate, AgentMessageChunkUpdate, AgentThoughtChunkUpdate, AvailableCommandsUpdate, PlanUpdate, ToolCallUpdate, ToolCallUpdateStatus } from '@/types/acpTypes';
 
 /**
@@ -38,6 +39,17 @@ export class AcpAdapter {
       this.currentMessageId = uuid();
     }
     return this.currentMessageId;
+  }
+
+  /**
+   * Force-flush and clear the streaming buffer for the message that was just
+   * completed. Must be called once sendPrompt() resolves (turn finished), before
+   * resetMessageTracking() generates a new id for the next turn.
+   */
+  finalizeCurrentMessage(): void {
+    if (this.currentMessageId) {
+      streamingBuffer.finalize(this.currentMessageId);
+    }
   }
 
   /**

@@ -10,7 +10,7 @@
 import crypto from 'crypto';
 import type Database from 'better-sqlite3';
 import BetterSqlite3 from 'better-sqlite3';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { getDataPath, ensureDirectory } from '@process/utils';
 import path from 'path';
 

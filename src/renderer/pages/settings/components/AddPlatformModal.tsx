@@ -126,6 +126,9 @@ const AddPlatformModal = ModalHOC<{
             </Select>
           </Form.Item>
 
+          {/* Aviso: la API nativa de Anthropic no es compatible con el formato OpenAI que usa este motor; sugerir OpenRouter */}
+          {platformValue === 'Anthropic' && <div className='text-12px text-t-secondary -mt-8px mb-16px'>{t('settings.anthropicOpenRouterHint')}</div>}
+
           {/* Base URL - 仅自定义选项显示 / Base URL - only for Custom option */}
           <Form.Item hidden={!isCustom} label={t('settings.baseUrl')} field={'baseUrl'} required={isCustom} rules={[{ required: isCustom }]}>
             <Input

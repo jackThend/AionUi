@@ -147,7 +147,7 @@ export const addOrUpdateMessage = (conversation_id: string, message: TMessage, b
         const incomingMsg = message as IMessageText;
         const content = incomingMsg.content.content;
         const messageId = message.msg_id || '';
-        streamingBuffer.append(message.id, messageId, conversation_id, content, backend ? 'accumulate' : ACP_BACKENDS_ALL[backend].supportsStreaming ? 'accumulate' : 'replace');
+        streamingBuffer.append(message.id, messageId, conversation_id, content, backend && ACP_BACKENDS_ALL[backend]?.supportsStreaming ? 'accumulate' : 'replace');
       } else if (message.type === 'tool_group' || message.type === 'tool_call' || message.type === 'codex_tool_call' || message.type === 'acp_tool_call') {
         // Complex message types that need composeMessage logic
         // These are less frequent, so loading all messages of this type is acceptable

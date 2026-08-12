@@ -10,6 +10,30 @@ import type { ChildProcess, SpawnOptions } from 'child_process';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { ProcessConfig } from '@/process/initStorage';
+import type { IMcpServer } from '@/common/storage';
+import { getOpencodeProvider } from '@/common/opencodeProviders';
+
+/**
+ * CriterioIA: construye las variables de entorno del proveedor elegido en
+ * Settings > Proveedor de IA para el OpenCode embebido. Usa `OPENCODE_CONFIG_CONTENT`
+ * (config inline soportado nativamente por OpenCode, con precedencia sobre cualquier
+ * archivo en disco) para fijar el modelo por defecto sin pasar por su flujo interactivo
+ * `/connect`, y la variable de entorno propia del proveedor (ej. `ANTHROPIC_API_KEY`)
+ * para la API key — confirmado en vivo que OpenCode reconoce ambas sin configuración
+ * adicional. No se toca `~/.local/share/opencode/auth.json`.
+ */
+async function buildOpencodeEnv(): Promise<Record<string, string> | undefined> {
+  const config = await ProcessConfig.get('app.opencodeConfig');
+  if (!config?.apiKey) return undefined;
+  const provider = getOpencodeProvider(config.providerId);
+  if (!provider) return undefined;
+
+  return {
+    [provider.envVar]: config.apiKey,
+    OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: config.model || provider.defaultModel }),
+  };
+}
 
 interface PendingRequest<T = unknown> {
   resolve: (value: T) => void;
@@ -49,6 +73,13 @@ export function createGenericSpawnConfig(cliPath: string, workingDir: string, ac
     // For regular paths like '/usr/local/bin/cli' or simple commands like 'goose'
     spawnCommand = cliPath;
     spawnArgs = effectiveAcpArgs;
+  }
+
+  // Con shell:true en Windows, cmd.exe no cita automaticamente el comando -- una ruta
+  // absoluta con espacios (ej. el binario embebido de OpenCode bajo "Proyectos Software\")
+  // se rompe en el primer espacio sin este quoting manual.
+  if (isWindows && spawnCommand.includes(' ') && !spawnCommand.startsWith('"')) {
+    spawnCommand = `"${spawnCommand}"`;
   }
 
   const options: SpawnOptions = {
@@ -110,11 +141,17 @@ export class AcpConnection {
       case 'goose':
       case 'auggie':
       case 'kimi':
-      case 'opencode':
         if (!cliPath) {
           throw new Error(`CLI path is required for ${backend} backend`);
         }
         await this.connectGenericBackend(backend, cliPath, workingDir, acpArgs);
+        break;
+
+      case 'opencode':
+        if (!cliPath) {
+          throw new Error(`CLI path is required for ${backend} backend`);
+        }
+        await this.connectGenericBackend(backend, cliPath, workingDir, acpArgs, await buildOpencodeEnv());
         break;
 
       case 'custom':
@@ -533,10 +570,47 @@ export class AcpConnection {
     return result;
   }
 
-  async newSession(cwd: string = process.cwd()): Promise<AcpResponse> {
+  /**
+   * CriterioIA: Construye la lista mcpServers real para session/new a partir del
+   * registro genérico ProcessConfig('mcp.config'), en vez de mandar siempre [].
+   * Esto es complementario (y redundante-pero-inofensivo) respecto a la config MCP
+   * nativa que cada CLI (Claude/Qwen/OpenCode) ya lee por su cuenta al arrancar:
+   * si el backend ACP honra este parámetro del protocolo, las herramientas quedan
+   * disponibles incluso sin depender de esa config nativa por-CLI.
+   * Forma exacta según el schema de ACP (agentclientprotocol.com/protocol/schema):
+   * McpServerStdio = { name, command, args: string[], env: {name,value}[] }.
+   */
+  private async buildAcpMcpServers(extraServers?: Array<{ name: string; command: string; args: string[]; env: Array<{ name: string; value: string }> }>): Promise<Array<{ name: string; command: string; args: string[]; env: Array<{ name: string; value: string }> }>> {
+    try {
+      const configuredServers = await ProcessConfig.get('mcp.config');
+      const base = !Array.isArray(configuredServers)
+        ? []
+        : configuredServers
+            .filter((server: IMcpServer) => server.enabled && server.transport.type === 'stdio')
+            .map((server: IMcpServer) => {
+              const transport = server.transport as { command: string; args?: string[]; env?: Record<string, string> };
+              return {
+                name: server.name,
+                command: transport.command,
+                args: transport.args || [],
+                env: Object.entries(transport.env || {}).map(([name, value]) => ({ name, value })),
+              };
+            });
+      // CriterioIA: servidores adicionales pasados explicitamente (ej. dev-tools para el
+      // agente programador del portal). No pasan por el registro global mcp.config a
+      // proposito, para no exponerlos al chat judicial normal.
+      return extraServers && extraServers.length > 0 ? [...base, ...extraServers] : base;
+    } catch (error) {
+      console.warn('[ACP] Failed to build mcpServers for session/new:', error);
+      return extraServers && extraServers.length > 0 ? extraServers : [];
+    }
+  }
+
+  async newSession(cwd: string = process.cwd(), extraMcpServers?: Array<{ name: string; command: string; args: string[]; env: Array<{ name: string; value: string }> }>): Promise<AcpResponse> {
+    const mcpServers = await this.buildAcpMcpServers(extraMcpServers);
     const response = await this.sendRequest<AcpResponse & { sessionId?: string }>('session/new', {
       cwd,
-      mcpServers: [] as unknown[],
+      mcpServers,
     });
 
     this.sessionId = response.sessionId;

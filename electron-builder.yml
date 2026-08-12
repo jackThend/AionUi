@@ -1,7 +1,7 @@
-appId: com.aionui.app
-productName: AionUi
-executableName: AionUi
-copyright: Copyright © 2024 AionUi
+appId: com.criterioia.app
+productName: CriterioIA
+executableName: CriterioIA
+copyright: Copyright © 2026 CriterioIA
 
 asar:
   smartUnpack: true
@@ -16,8 +16,9 @@ files:
   - public/**/*
   - package.json
   - node_modules/better-sqlite3/**/*
-  - node_modules/bcrypt/**/*
+  - node_modules/bcryptjs/**/*
   - node_modules/node-pty/**/*
+  - node_modules/opencode-ai/**/*
   - node_modules/@mapbox/**/*
   - node_modules/detect-libc/**/*
   - node_modules/prebuild-install/**/*
@@ -54,7 +55,7 @@ files:
   - '!**/node_modules/@*/*/vendor/**'
   # Re-include vendor dirs for native modules that need them (if any)
   - 'node_modules/better-sqlite3/vendor/**'
-  - 'node_modules/bcrypt/vendor/**'
+  - 'node_modules/bcryptjs/vendor/**'
   - 'node_modules/node-pty/vendor/**'
   # Exclude webpack source maps
   - '!**/*.map'
@@ -108,13 +109,13 @@ linux:
   icon: resources/app.png
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}
   category: Utility
-  maintainer: aionui
-  vendor: aionui
+  maintainer: criterioia
+  vendor: criterioia
   synopsis: ${description}
   description: ${description}
   desktop:
     entry:
-      Name: AionUi
+      Name: CriterioIA
       Comment: ${description}
       Icon: aionui
       Categories: Office;Utility;
@@ -125,8 +126,9 @@ nodeGypRebuild: false
 
 asarUnpack:
   - "**/node_modules/better-sqlite3/**/*"
-  - "**/node_modules/bcrypt/**/*"
+  - "**/node_modules/bcryptjs/**/*"
   - "**/node_modules/node-pty/**/*"
+  - "**/node_modules/opencode-ai/**/*"
   - "**/node_modules/@mapbox/**/*"
   - "**/node_modules/detect-libc/**/*"
   - "**/node_modules/prebuild-install/**/*"

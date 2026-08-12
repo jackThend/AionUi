@@ -52,6 +52,23 @@ export interface IConfigStorageRefer {
   };
   // 是否在粘贴文件到工作区时询问确认（true = 不再询问）
   'workspace.pasteConfirm'?: boolean;
+  // CriterioIA: proveedor de IA por defecto para conversaciones nuevas, configurado en
+  // Settings > Proveedor de IA. agentKey usa el mismo formato que getAgentKey() en
+  // guid/index.tsx ('gemini' | AcpBackend | `custom:${uuid}`). Sin esto, la pantalla de
+  // chat nuevo siempre volvia a 'gemini' (estado efimero, nunca persistido). El sub-modelo
+  // de Gemini se sigue guardando por separado en 'gemini.defaultModel', ya existente.
+  'app.defaultBackend'?: {
+    agentKey: string;
+  };
+  // CriterioIA: proveedor/modelo/API key para el OpenCode embebido (Settings > Proveedor
+  // de IA). providerId referencia OPENCODE_PROVIDERS en common/opencodeProviders.ts.
+  // Se inyecta como variable de entorno al spawnear el proceso (AcpConnection.ts), nunca
+  // se escribe en el archivo de auth propio de OpenCode.
+  'app.opencodeConfig'?: {
+    providerId: string;
+    model: string;
+    apiKey: string;
+  };
 }
 
 export interface IEnvStorageRefer {
@@ -86,6 +103,11 @@ export type TChatConversation =
         customWorkspace?: boolean; // true 用户指定工作目录 false 系统默认工作目录
         webSearchEngine?: 'google' | 'default'; // 搜索引擎配置
         lastTokenUsage?: TokenUsageData; // 上次的 token 使用统计
+        // CriterioIA: marca una conversacion como "agente programador" del portal. No es
+        // un tipo de conversacion nuevo (el type sigue siendo 'gemini'/'acp' segun el motor):
+        // esta bandera decide que se adjunta el servidor MCP dev-tools y el prompt del agente
+        // programador, y que se filtra fuera del sidebar judicial (ver ChatHistory).
+        isDevAgent?: boolean;
       }
     >
   | Omit<
@@ -98,6 +120,7 @@ export type TChatConversation =
           customWorkspace?: boolean;
           agentName?: string;
           customAgentId?: string; // UUID for identifying specific custom agent
+          isDevAgent?: boolean; // CriterioIA: ver nota en la variante 'gemini'
         }
       >,
       'model'

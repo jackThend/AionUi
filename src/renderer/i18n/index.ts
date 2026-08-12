@@ -6,9 +6,13 @@ import zhCN from './locales/zh-CN.json';
 import enUS from './locales/en-US.json';
 import jaJP from './locales/ja-JP.json';
 import zhTW from './locales/zh-TW.json';
+import esES from './locales/es-ES.json';
 import { ConfigStorage } from '@/common/storage';
 
 const resources = {
+  'es-ES': {
+    translation: esES,
+  },
   'zh-CN': {
     translation: zhCN,
   },
@@ -28,7 +32,7 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'en-US',
+    fallbackLng: 'es-ES',
     debug: false,
     interpolation: {
       escapeValue: false,

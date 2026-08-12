@@ -3,6 +3,7 @@ import classNames from 'classnames';
 import { Tooltip } from '@arco-design/web-react';
 import { ExpandLeft, ExpandRight, MenuFold, MenuUnfold } from '@icon-park/react';
 import { useTranslation } from 'react-i18next';
+import useTheme from '@/renderer/hooks/useTheme';
 
 import WindowControls from '../WindowControls';
 import { WORKSPACE_STATE_EVENT, dispatchWorkspaceToggleEvent } from '@renderer/utils/workspaceEvents';
@@ -19,9 +20,11 @@ const detectMac = () => typeof navigator !== 'undefined' && /mac/i.test(navigato
 
 const Titlebar: React.FC<TitlebarProps> = ({ workspaceAvailable }) => {
   const { t } = useTranslation();
-  const appTitle = useMemo(() => t('app.name', { defaultValue: 'AionUi' }), [t]);
+  const appTitle = useMemo(() => t('app.name', { defaultValue: 'CriterioIA' }), [t]);
   const [workspaceCollapsed, setWorkspaceCollapsed] = useState(true);
   const layout = useLayoutContext();
+  const [theme, setTheme] = useTheme();
+  const isDark = theme === 'dark';
 
   // 监听工作空间折叠状态，保持按钮图标一致 / Sync workspace collapsed state for toggle button
   useEffect(() => {
@@ -90,6 +93,18 @@ const Titlebar: React.FC<TitlebarProps> = ({ workspaceAvailable }) => {
       </div>
       <div className='app-titlebar__brand'>{appTitle}</div>
       <div className='app-titlebar__toolbar'>
+        {/* Dark/Light mode toggle */}
+        <Tooltip content={isDark ? 'Modo claro' : 'Modo oscuro'} position='bottom'>
+          <button
+            type='button'
+            className='app-titlebar__button'
+            onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            aria-label={isDark ? 'Activar modo claro' : 'Activar modo oscuro'}
+            style={{ fontSize: '16px', lineHeight: 1 }}
+          >
+            {isDark ? '☀️' : '🌙'}
+          </button>
+        </Tooltip>
         {showWorkspaceButton && (
           <button type='button' className='app-titlebar__button' onClick={handleWorkspaceToggle} aria-label={workspaceTooltip}>
             {workspaceCollapsed ? <ExpandRight theme='outline' size='18' fill='currentColor' /> : <ExpandLeft theme='outline' size='18' fill='currentColor' />}

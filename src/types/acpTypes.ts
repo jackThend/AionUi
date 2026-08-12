@@ -227,7 +227,10 @@ export const ACP_BACKENDS_ALL: Record<AcpBackendAll, AcpBackendConfig> = {
     id: 'opencode',
     name: 'OpenCode',
     cliCommand: 'opencode',
-    authRequired: false,
+    // CriterioIA: OpenCode viene embebido (dependencia opencode-ai, ver AcpDetector.ts),
+    // pero necesita que el usuario configure un proveedor/API key en Settings > Proveedor
+    // de IA para poder responder (ver AcpConnection.ts's buildOpencodeEnv()).
+    authRequired: true,
     enabled: true, // ✅ OpenCode CLI，使用 `opencode acp` 启动
     supportsStreaming: false,
     acpArgs: ['acp'], // opencode 使用 acp 子命令

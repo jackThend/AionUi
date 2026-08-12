@@ -18,6 +18,7 @@ interface AcpAgentManagerData {
   customWorkspace?: boolean;
   conversation_id: string;
   customAgentId?: string; // 用于标识特定自定义代理的 UUID / UUID for identifying specific custom agent
+  isDevAgent?: boolean; // CriterioIA: conversacion del agente programador del portal
 }
 
 class AcpAgentManager extends BaseAgentManager<AcpAgentManagerData> {
@@ -85,6 +86,7 @@ class AcpAgentManager extends BaseAgentManager<AcpAgentManagerData> {
         workingDir: data.workspace,
         customArgs: customArgs,
         customEnv: customEnv,
+        isDevAgent: data.isDevAgent === true, // CriterioIA: portal dev-agent
         onStreamEvent: (v) => {
           // Handle preview_open event (chrome-devtools navigation interception)
           // 处理 preview_open 事件（chrome-devtools 导航拦截）

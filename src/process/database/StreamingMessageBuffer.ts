@@ -23,6 +23,7 @@ import { getDatabase } from './index';
  */
 
 interface StreamBuffer {
+  id: string;
   messageId: string;
   conversationId: string;
   currentContent: string;
@@ -71,6 +72,7 @@ export class StreamingMessageBuffer {
     if (!buffer) {
       // 首次 chunk，初始化缓冲区
       buffer = {
+        id,
         messageId,
         conversationId,
         currentContent: chunk,
@@ -108,6 +110,27 @@ export class StreamingMessageBuffer {
         this.flushBuffer(id, messageId, false);
       }, this.UPDATE_INTERVAL);
     }
+  }
+
+  /**
+   * 强制刷新并清理缓冲区（流结束时调用）
+   *
+   * 之前 flushBuffer 从未以 clearBuffer=true 被调用过：缓冲区永远不会被清理（内存泄漏），
+   * 而且短消息结尾的最后一段内容只能靠 300ms 定时器/20-chunk 阈值碰巧命中才会落盘。
+   * 这个方法保证轮次结束时最终内容一定写入数据库，并清理缓冲区和挂起的定时器。
+   *
+   * @param messageId - 合并消息唯一消息 ID
+   */
+  finalize(messageId: string): void {
+    const buffer = this.buffers.get(messageId);
+    if (!buffer) return;
+
+    if (buffer.updateTimer) {
+      clearTimeout(buffer.updateTimer);
+      buffer.updateTimer = undefined;
+    }
+
+    this.flushBuffer(buffer.id, messageId, true);
   }
 
   /**

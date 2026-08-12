@@ -7,7 +7,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { IncomingMessage } from 'http';
 import { AuthService } from '../service/AuthService';
-import { UserRepository } from '../repository/UserRepository';
 import { AUTH_CONFIG, SERVER_CONFIG } from '../../config/constants';
 
 /**
@@ -63,53 +62,6 @@ class TokenExtractor {
 }
 
 /**
- * 验证策略接口 - 定义未授权处理方式
- * Validation Strategy Interface - Define unauthorized handling
- */
-interface ValidationStrategy {
-  handleUnauthorized(res: Response): void;
-}
-
-/**
- * JSON 验证策略 - 返回 JSON 格式的错误响应
- * JSON Validation Strategy - Return JSON format error response
- */
-class JsonValidationStrategy implements ValidationStrategy {
-  handleUnauthorized(res: Response): void {
-    res.status(403).json({ success: false, error: 'Access denied. Please login first.' });
-  }
-}
-
-/**
- * HTML 验证策略 - 返回 HTML 格式的错误响应
- * HTML Validation Strategy - Return HTML format error response
- */
-class HtmlValidationStrategy implements ValidationStrategy {
-  handleUnauthorized(res: Response): void {
-    res.status(403).send('Access Denied');
-  }
-}
-
-/**
- * 验证器工厂 - 根据类型创建相应的验证策略
- * Validator Factory - Create validation strategy based on type
- */
-class ValidatorFactory {
-  /**
-   * 创建验证策略
-   * Create validation strategy
-   * @param type - 策略类型 (json 或 html) / Strategy type (json or html)
-   * @returns 验证策略实例 / Validation strategy instance
-   */
-  static create(type: 'json' | 'html'): ValidationStrategy {
-    if (type === 'html') {
-      return new HtmlValidationStrategy();
-    }
-    return new JsonValidationStrategy();
-  }
-}
-
-/**
  * 创建认证中间件
  * Create authentication middleware
  *
@@ -128,38 +80,10 @@ class ValidatorFactory {
  * @param type - 响应类型 (json 或 html) / Response type (json or html)
  * @returns Express 中间件函数 / Express middleware function
  */
-export const createAuthMiddleware = (type: 'json' | 'html' = 'json') => {
-  const strategy = ValidatorFactory.create(type);
-
-  return (req: Request, res: Response, next: NextFunction): void => {
-    // 1. 提取 token / Extract token
-    const token = TokenExtractor.extract(req);
-
-    if (!token) {
-      strategy.handleUnauthorized(res);
-      return;
-    }
-
-    // 2. 验证 token / Verify token
-    const decoded = AuthService.verifyToken(token);
-    if (!decoded) {
-      strategy.handleUnauthorized(res);
-      return;
-    }
-
-    // 3. 查找用户 / Find user
-    const user = UserRepository.findById(decoded.userId);
-    if (!user) {
-      strategy.handleUnauthorized(res);
-      return;
-    }
-
-    // 4. 附加用户信息到请求对象 / Attach user info to request object
-    req.user = {
-      id: user.id,
-      username: user.username,
-    };
-
+// CriterioIA: la app es de un solo administrador de tribunal, sin login ni cuentas
+// multiusuario -- el middleware pasa directo sin exigir token.
+export const createAuthMiddleware = (_type: 'json' | 'html' = 'json') => {
+  return (_req: Request, _res: Response, next: NextFunction): void => {
     next();
   };
 };

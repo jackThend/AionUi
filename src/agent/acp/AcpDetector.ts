@@ -5,9 +5,36 @@
  */
 
 import { execSync } from 'child_process';
+import { existsSync } from 'fs';
+import path from 'path';
+import { app } from 'electron';
 import type { AcpBackendAll } from '@/types/acpTypes';
 import { POTENTIAL_ACP_CLIS } from '@/types/acpTypes';
 import { ProcessConfig } from '@/process/initStorage';
+
+/**
+ * CriterioIA: OpenCode viene embebido (dependencia `opencode-ai`) para que el
+ * administrador no tenga que instalarlo aparte. Se comprueban varias rutas posibles:
+ * dev (node_modules/ directo bajo la raíz de la app, mismo patrón que
+ * judicialMcpDescriptor.ts's getJudicialBackendRoot()) y empaquetado — este proyecto
+ * tiene dos pipelines de empaquetado en paralelo (Electron Forge con `extraResource`,
+ * y electron-builder con `asarUnpack`), cada uno con una convención de carpetas
+ * distinta para los recursos desempaquetados.
+ */
+const getBundledOpencodePath = (): string | null => {
+  const binName = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
+  const candidates: string[] = [];
+
+  if (app.isPackaged) {
+    if (process.resourcesPath) {
+      candidates.push(path.join(process.resourcesPath, 'node_modules', 'opencode-ai', 'bin', binName), path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'opencode-ai', 'bin', binName));
+    }
+  } else {
+    candidates.push(path.join(app.getAppPath(), 'node_modules', 'opencode-ai', 'bin', binName));
+  }
+
+  return candidates.find((candidate) => existsSync(candidate)) ?? null;
+};
 
 interface DetectedAgent {
   backend: AcpBackendAll;
@@ -75,6 +102,20 @@ class AcpDetector {
     // 并行检测所有潜在的 ACP CLI
     const detectionPromises = POTENTIAL_ACP_CLIS.map((cli) => {
       return Promise.resolve().then(() => {
+        // OpenCode viene embebido: si el binario empaquetado existe, se usa directo
+        // sin depender del PATH del sistema (el usuario no necesita instalarlo aparte).
+        if (cli.backendId === 'opencode') {
+          const bundledPath = getBundledOpencodePath();
+          if (bundledPath) {
+            return {
+              backend: cli.backendId,
+              name: cli.name,
+              cliPath: bundledPath,
+              acpArgs: cli.args,
+            };
+          }
+        }
+
         try {
           execSync(`${whichCommand} ${cli.cmd}`, {
             encoding: 'utf-8',

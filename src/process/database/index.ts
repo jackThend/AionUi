@@ -141,7 +141,7 @@ export class AionUIDatabase {
    *
    * @param username - Username (unique identifier)
    * @param email - User email (optional)
-   * @param passwordHash - Hashed password (use bcrypt)
+   * @param passwordHash - Hashed password (use bcryptjs)
    * @returns Query result with created user data
    */
   createUser(username: string, email: string | undefined, passwordHash: string): IQueryResult<IUser> {
@@ -331,7 +331,7 @@ export class AionUIDatabase {
    * 更新用户的密码哈希
    *
    * @param userId - User ID to update
-   * @param newPasswordHash - New hashed password (use bcrypt)
+   * @param newPasswordHash - New hashed password (use bcryptjs)
    * @returns Query result with success status
    */
   updateUserPassword(userId: string, newPasswordHash: string): IQueryResult<boolean> {

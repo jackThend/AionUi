@@ -11,6 +11,7 @@ import type { CodexEventHandler } from '@/agent/codex/handlers/CodexEventHandler
 import type { CodexSessionManager } from '@/agent/codex/handlers/CodexSessionManager';
 import type { CodexFileOperationHandler } from '@/agent/codex/handlers/CodexFileOperationHandler';
 import { getConfiguredAppClientName, getConfiguredAppClientVersion, getConfiguredCodexMcpProtocolVersion } from '../../../common/utils/appConfig';
+import { wrapWithJudicialContext } from '@/agent/prompts/judicialPrompt';
 
 interface LegacyNetworkErrorDetails {
   networkErrorType?: string;
@@ -50,6 +51,9 @@ export class CodexAgent {
   private readonly webSearchEnabled: boolean;
   private conn: CodexConnection | null = null;
   private conversationId: string | null = null;
+
+  // CriterioIA: Track if judicial context has been injected in this session
+  private hasInjectedContext: boolean = false;
 
   constructor(cfg: CodexAgentConfig) {
     this.id = cfg.id;
@@ -202,12 +206,18 @@ export class CodexAgent {
     const convId = this.conversationId || this.generateConversationId();
     this.conversationId = convId;
 
+    // CriterioIA: Inject judicial context for Codex backend (use compact version)
+    const contextualizedPrompt = wrapWithJudicialContext(prompt, !this.hasInjectedContext, true);
+    if (!this.hasInjectedContext) {
+      this.hasInjectedContext = true;
+    }
+
     try {
       await this.conn?.request(
         'tools/call',
         {
           name: 'codex-reply',
-          arguments: { prompt, conversationId: convId },
+          arguments: { prompt: contextualizedPrompt, conversationId: convId },
         },
         600000 // 10分钟超时，避免长任务中断
       );

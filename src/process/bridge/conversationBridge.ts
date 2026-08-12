@@ -16,12 +16,14 @@ import type { GeminiAgentManager } from '../task/GeminiAgentManager';
 import { copyFilesToDirectory, readDirectoryRecursive } from '../utils';
 import WorkerManage from '../WorkerManage';
 import { migrateConversationToDatabase } from './migrationUtils';
+import { getJudicialBackendRoot } from '../services/mcpServices/judicialMcpDescriptor';
+import * as path from 'path';
 
 export function initConversationBridge(): void {
   ipcBridge.conversation.create.provider(async (params): Promise<TChatConversation> => {
     const { type, extra, name, model, id } = params;
     const buildConversation = () => {
-      if (type === 'gemini') return createGeminiAgent(model, extra.workspace, extra.defaultFiles, extra.webSearchEngine);
+      if (type === 'gemini') return createGeminiAgent(model, extra.workspace, extra.defaultFiles, extra.webSearchEngine, extra.isDevAgent);
       if (type === 'acp') return createAcpAgent(params);
       if (type === 'codex') return createCodexAgent(params);
       throw new Error('Invalid conversation type');
@@ -301,13 +303,19 @@ export function initConversationBridge(): void {
       return { success: false, msg: 'conversation not found' };
     }
 
-    // 复制文件到工作空间
-    await copyFilesToDirectory(task.workspace, files);
+    // CriterioIA: los adjuntos van a la carpeta data_input REAL del proyecto (no a
+    // task.workspace/data_input), para que la herramienta MCP judicial (que para los
+    // tres backends ya lee/escribe ahi directamente, ver judicialMcpDescriptor.ts) los
+    // vea. Antes esto solo era consistente para Gemini cuando su MCP tambien apuntaba
+    // (mal) a workspace/data_input; para ACP/Codex el archivo quedaba en una carpeta
+    // que la herramienta nunca miraba.
+    const dataInputPath = path.join(getJudicialBackendRoot(), 'data_input');
+    await copyFilesToDirectory(dataInputPath, files);
 
     try {
       // 根据 task 类型调用对应的 sendMessage 方法
       if (task.type === 'gemini') {
-        await (task as GeminiAgentManager).sendMessage(other);
+        await (task as GeminiAgentManager).sendMessage({ ...other, files });
         return { success: true };
       } else if (task.type === 'acp') {
         await (task as AcpAgentManager).sendMessage({ content: other.input, files, msg_id: other.msg_id });

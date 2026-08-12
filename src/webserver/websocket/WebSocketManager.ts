@@ -41,37 +41,16 @@ export class WebSocketManager {
    */
   setupConnectionHandler(onMessage: (name: string, data: any, ws: WebSocket) => void): void {
     this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-      const token = TokenMiddleware.extractWebSocketToken(req);
+      // CriterioIA: sin login de por medio, no se exige token para conectar.
+      const token = TokenMiddleware.extractWebSocketToken(req) ?? 'local-admin';
 
-      if (!this.validateConnection(ws, token)) {
-        return;
-      }
-
-      this.addClient(ws, token!);
+      this.addClient(ws, token);
       this.setupMessageHandler(ws, onMessage);
       this.setupCloseHandler(ws);
       this.setupErrorHandler(ws);
 
       console.log('[WebSocketManager] Client connected');
     });
-  }
-
-  /**
-   * 验证连接
-   * Validate connection
-   */
-  private validateConnection(ws: WebSocket, token: string | null): boolean {
-    if (!token) {
-      ws.close(WEBSOCKET_CONFIG.CLOSE_CODES.POLICY_VIOLATION, 'No token provided');
-      return false;
-    }
-
-    if (!TokenMiddleware.validateWebSocketToken(token)) {
-      ws.close(WEBSOCKET_CONFIG.CLOSE_CODES.POLICY_VIOLATION, 'Invalid or expired token');
-      return false;
-    }
-
-    return true;
   }
 
   /**
@@ -191,15 +170,6 @@ export class WebSocketManager {
       if (this.isClientTimeout(clientInfo, now)) {
         console.log('[WebSocketManager] Client heartbeat timeout, closing connection');
         ws.close(WEBSOCKET_CONFIG.CLOSE_CODES.POLICY_VIOLATION, 'Heartbeat timeout');
-        this.clients.delete(ws);
-        continue;
-      }
-
-      // Validate if WebSocket token is still valid
-      if (!TokenMiddleware.validateWebSocketToken(clientInfo.token)) {
-        console.log('[WebSocketManager] Token expired, closing connection');
-        ws.send(JSON.stringify({ name: 'auth-expired', data: { message: 'Token expired, please login again' } }));
-        ws.close(WEBSOCKET_CONFIG.CLOSE_CODES.POLICY_VIOLATION, 'Token expired');
         this.clients.delete(ws);
         continue;
       }
