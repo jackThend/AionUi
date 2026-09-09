@@ -21,6 +21,7 @@ import { initGeminiBridge } from './geminiBridge';
 import { initMcpBridge } from './mcpBridge';
 import { initModelBridge } from './modelBridge';
 import { initPreviewHistoryBridge } from './previewHistoryBridge';
+import { initSecretBridge } from './secretBridge';
 import { initShellBridge } from './shellBridge';
 import { initWindowControlsBridge } from './windowControlsBridge';
 
@@ -42,6 +43,7 @@ export function initAllBridges(): void {
   initAuthBridge();
   initBusinessRulesBridge();
   initModelBridge();
+  initSecretBridge();
   initMcpBridge();
   initDatabaseBridge();
   initPreviewHistoryBridge();
@@ -61,6 +63,6 @@ export async function initializeAcpDetector(): Promise<void> {
 }
 
 // 导出初始化函数供单独使用
-export { initAcpConversationBridge, initApplicationBridge, initAuthBridge, initBusinessRulesBridge, initCodexConversationBridge, initConversationBridge, initDatabaseBridge, initDialogBridge, initDocumentBridge, initFsBridge, initGeminiBridge, initGeminiConversationBridge, initMcpBridge, initModelBridge, initPreviewHistoryBridge, initShellBridge, initWindowControlsBridge };
+export { initAcpConversationBridge, initApplicationBridge, initAuthBridge, initBusinessRulesBridge, initCodexConversationBridge, initConversationBridge, initDatabaseBridge, initDialogBridge, initDocumentBridge, initFsBridge, initGeminiBridge, initGeminiConversationBridge, initMcpBridge, initModelBridge, initPreviewHistoryBridge, initSecretBridge, initShellBridge, initWindowControlsBridge };
 // 导出窗口控制相关工具函数
 export { registerWindowMaximizeListeners } from './windowControlsBridge';

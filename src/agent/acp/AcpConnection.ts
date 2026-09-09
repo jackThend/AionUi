@@ -11,6 +11,7 @@ import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { ProcessConfig } from '@/process/initStorage';
+import { decryptSecret } from '@/process/secretStore';
 import type { IMcpServer } from '@/common/storage';
 import { getOpencodeProvider } from '@/common/opencodeProviders';
 
@@ -18,10 +19,16 @@ import { getOpencodeProvider } from '@/common/opencodeProviders';
  * CriterioIA: construye las variables de entorno del proveedor elegido en
  * Settings > Proveedor de IA para el OpenCode embebido. Usa `OPENCODE_CONFIG_CONTENT`
  * (config inline soportado nativamente por OpenCode, con precedencia sobre cualquier
- * archivo en disco) para fijar el modelo por defecto sin pasar por su flujo interactivo
- * `/connect`, y la variable de entorno propia del proveedor (ej. `ANTHROPIC_API_KEY`)
- * para la API key — confirmado en vivo que OpenCode reconoce ambas sin configuración
- * adicional. No se toca `~/.local/share/opencode/auth.json`.
+ * archivo en disco) para declarar el proveedor + su API key + el modelo por defecto, sin
+ * pasar por el flujo interactivo `opencode auth login`.
+ *
+ * IMPORTANTE: no alcanza con `{"model": "..."}`. OpenCode necesita el bloque
+ * `provider.<id>.options.apiKey` para REGISTRAR el proveedor; sin eso el modelo no
+ * resuelve y devuelve "Internal error: Not Found" (mismo error con key valida o falsa,
+ * porque falla antes de autenticar). La key se referencia como `{env:VAR}` para que su
+ * valor real viaje solo en la variable de entorno, no dentro del JSON. Los ids de
+ * OPENCODE_PROVIDERS (anthropic/openai/deepseek/groq/xai/openrouter) coinciden con los
+ * ids de proveedor de OpenCode. No se toca `~/.local/share/opencode/auth.json`.
  */
 async function buildOpencodeEnv(): Promise<Record<string, string> | undefined> {
   const config = await ProcessConfig.get('app.opencodeConfig');
@@ -29,9 +36,26 @@ async function buildOpencodeEnv(): Promise<Record<string, string> | undefined> {
   const provider = getOpencodeProvider(config.providerId);
   if (!provider) return undefined;
 
+  // La key se guarda cifrada (safeStorage). Se descifra aquí, en memoria del proceso main,
+  // solo para inyectarla en la variable de entorno del proceso hijo de OpenCode.
+  const apiKey = decryptSecret(config.apiKey);
+  if (!apiKey) return undefined;
+
+  const model = config.model || provider.defaultModel;
+  const opencodeConfig = {
+    provider: {
+      [provider.id]: {
+        options: {
+          apiKey: `{env:${provider.envVar}}`,
+        },
+      },
+    },
+    model,
+  };
+
   return {
-    [provider.envVar]: config.apiKey,
-    OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: config.model || provider.defaultModel }),
+    [provider.envVar]: apiKey,
+    OPENCODE_CONFIG_CONTENT: JSON.stringify(opencodeConfig),
   };
 }
 

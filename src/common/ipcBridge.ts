@@ -122,6 +122,13 @@ export const mode = {
   getModelConfig: bridge.buildProvider<IProvider[], void>('mode.get-model-config'),
 };
 
+// Cifrado de secretos (API keys) en reposo vía Electron safeStorage. Ver process/secretStore.ts.
+export const secret = {
+  encrypt: bridge.buildProvider<string, { plaintext: string }>('secret.encrypt'),
+  decrypt: bridge.buildProvider<string, { ciphertext: string }>('secret.decrypt'),
+  isAvailable: bridge.buildProvider<boolean, void>('secret.is-available'),
+};
+
 // ACP对话相关接口 - 复用统一的conversation接口
 export const acpConversation = {
   sendMessage: conversation.sendMessage,

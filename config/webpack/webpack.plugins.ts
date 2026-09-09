@@ -8,9 +8,16 @@ import webpack from 'webpack';
 const ForkTsCheckerWebpackPlugin: typeof IForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
 export const plugins: WebpackPluginInstance[] = [
-  new ForkTsCheckerWebpackPlugin({
-    logger: 'webpack-infrastructure',
-  }),
+  // El type-check en fork (ForkTsChecker) consume ~2GB y es redundante con `tsc --noEmit` /
+  // el lint; en máquinas con poca RAM se puede saltar con DISABLE_TS_CHECK=1 para que el build
+  // quepa en memoria (no cambia el bundle emitido, solo omite la verificación de tipos).
+  ...(process.env.DISABLE_TS_CHECK
+    ? []
+    : [
+        new ForkTsCheckerWebpackPlugin({
+          logger: 'webpack-infrastructure',
+        }),
+      ]),
   new webpack.DefinePlugin({
     'process.env.env': JSON.stringify(process.env.env),
   }),

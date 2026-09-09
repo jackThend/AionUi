@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import { ipcBridge } from '../../common';
 import type { IBusinessRulesSettings } from '../../common/ipcBridge';
-import { getJudicialBackendRoot } from '../services/mcpServices/judicialMcpDescriptor';
+import { getJudicialDataDir } from '../services/mcpServices/judicialMcpDescriptor';
 
 /**
  * Reglas de negocio judiciales configurables desde Settings > Reglas de Negocio.
@@ -34,7 +34,7 @@ const BOUNDS: Record<keyof IBusinessRulesSettings, [number, number]> = {
 };
 
 function getBusinessRulesPath(): string {
-  return path.join(getJudicialBackendRoot(), 'data_input', 'business_rules.json');
+  return path.join(getJudicialDataDir(), 'business_rules.json');
 }
 
 function readBusinessRules(): IBusinessRulesSettings {

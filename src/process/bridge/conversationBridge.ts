@@ -16,7 +16,7 @@ import type { GeminiAgentManager } from '../task/GeminiAgentManager';
 import { copyFilesToDirectory, readDirectoryRecursive } from '../utils';
 import WorkerManage from '../WorkerManage';
 import { migrateConversationToDatabase } from './migrationUtils';
-import { getJudicialBackendRoot } from '../services/mcpServices/judicialMcpDescriptor';
+import { getJudicialDataDir } from '../services/mcpServices/judicialMcpDescriptor';
 import * as path from 'path';
 
 export function initConversationBridge(): void {
@@ -309,7 +309,7 @@ export function initConversationBridge(): void {
     // vea. Antes esto solo era consistente para Gemini cuando su MCP tambien apuntaba
     // (mal) a workspace/data_input; para ACP/Codex el archivo quedaba en una carpeta
     // que la herramienta nunca miraba.
-    const dataInputPath = path.join(getJudicialBackendRoot(), 'data_input');
+    const dataInputPath = getJudicialDataDir();
     await copyFilesToDirectory(dataInputPath, files);
 
     try {

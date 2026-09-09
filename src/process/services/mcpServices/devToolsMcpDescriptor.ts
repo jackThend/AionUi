@@ -6,7 +6,7 @@
 
 import { app } from 'electron';
 import path from 'path';
-import { getJudicialBackendRoot } from './judicialMcpDescriptor';
+import { getJudicialBackendRoot, getJudicialDataDir } from './judicialMcpDescriptor';
 
 /**
  * Descriptor del servidor MCP de herramientas de desarrollo (backend/dev_tools_mcp_server.py).
@@ -54,7 +54,7 @@ export function getDevToolsMcpServerDescriptor(): DevToolsMcpServerDescriptor {
     args,
     env: {
       CRITERIOIA_REPO_ROOT: backendRoot,
-      CRITERIOIA_DATA_DIR: path.join(backendRoot, 'data_input'),
+      CRITERIOIA_DATA_DIR: getJudicialDataDir(),
       CRITERIOIA_APPDB_PATH: appDbPath,
       PYTHONUTF8: '1',
     },

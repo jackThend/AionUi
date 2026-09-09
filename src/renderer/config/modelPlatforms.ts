@@ -15,7 +15,6 @@
 // Provider Logo imports
 import GeminiLogo from '@/renderer/assets/logos/gemini.svg';
 import OpenAILogo from '@/renderer/assets/logos/openai.svg';
-import AnthropicLogo from '@/renderer/assets/logos/anthropic.svg';
 import DeepSeekLogo from '@/renderer/assets/logos/deepseek.svg';
 import OpenRouterLogo from '@/renderer/assets/logos/openrouter.svg';
 import SiliconFlowLogo from '@/renderer/assets/logos/siliconflow.svg';
@@ -76,7 +75,6 @@ export const MODEL_PLATFORMS: PlatformConfig[] = [
 
   // 预设供应商（按字母顺序排列）
   { name: 'OpenAI', value: 'OpenAI', logo: OpenAILogo, platform: 'custom', baseUrl: 'https://api.openai.com/v1' },
-  { name: 'Anthropic', value: 'Anthropic', logo: AnthropicLogo, platform: 'custom', baseUrl: 'https://api.anthropic.com/v1' },
   { name: 'DeepSeek', value: 'DeepSeek', logo: DeepSeekLogo, platform: 'custom', baseUrl: 'https://api.deepseek.com' },
   { name: 'OpenRouter', value: 'OpenRouter', logo: OpenRouterLogo, platform: 'custom', baseUrl: 'https://openrouter.ai/api/v1' },
   { name: 'Dashscope', value: 'Dashscope', logo: QwenLogo, platform: 'custom', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
