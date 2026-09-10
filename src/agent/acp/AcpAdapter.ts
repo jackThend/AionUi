@@ -288,38 +288,14 @@ export class AcpAdapter {
   }
 
   /**
-   * Convert available commands update to AionUI message
+   * CriterioIA: el catalogo de comandos/skills del backend NO se muestra como
+   * mensaje del chat. Antes se convertia en texto "Available Commands" que
+   * aparecia al saludar y confundia al Administrador. El catalogo sigue
+   * llegando por protocolo (no se rompe nada), pero no genera mensaje visible
+   * ni persistido. El aislamiento real (que skills existen) lo hacen el HOME
+   * sandbox + `permission.skill: deny` en AcpConnection, no este filtro.
    */
-  private convertAvailableCommandsUpdate(update: AvailableCommandsUpdate): TMessage | null {
-    const baseMessage = {
-      id: uuid(),
-      msg_id: uuid(), // 生成独立的 msg_id，避免与其他消息合并
-      conversation_id: this.conversationId,
-      createdAt: Date.now(),
-      position: 'left' as const,
-    };
-
-    const commandsData = update.update;
-    if (commandsData.availableCommands && commandsData.availableCommands.length > 0) {
-      const commandsList = commandsData.availableCommands
-        .map((command) => {
-          let line = `• **${command.name}**: ${command.description}`;
-          if (command.input?.hint) {
-            line += ` (${command.input.hint})`;
-          }
-          return line;
-        })
-        .join('\n');
-
-      return {
-        ...baseMessage,
-        type: 'text',
-        content: {
-          content: `🛠️ **Available Commands**\n\n${commandsList}`,
-        },
-      } as IMessageText;
-    }
-
+  private convertAvailableCommandsUpdate(_update: AvailableCommandsUpdate): TMessage | null {
     return null;
   }
 }

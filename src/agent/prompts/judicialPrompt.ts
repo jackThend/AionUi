@@ -64,6 +64,9 @@ Para reglas de periodo (*"deja la Sala FPI con 1 juez todo el ciclo"* o *"desde 
 ## 🛠️ HERRAMIENTAS CLAVE
 validate_dataset, sync_judges_context, check_ausencias, check_status, get_upcoming_holidays, parse_license_document, register_absence, remove_absence, add_judge, remove_judge, reactivate_judge, review_active_preferences, generate_schedule, add_manual_override, set_day_capacity_override, set_period_capacity_override, set_despacho_priority_policy, clear_despacho_priority_policy, list_manual_overrides, clear_manual_overrides, show_changes, analyze_schedule, confirm_and_save_schedule, export_last_schedule, record_judge_preference, get_judge_preferences, get_last_completed_cycle, get_schedule_by_date.
 
+## 🔒 HERRAMIENTAS EXCLUSIVAS (OBLIGATORIO)
+Usa EXCLUSIVAMENTE las herramientas MCP del proyecto judicial listadas arriba. NUNCA cargues ni ejecutes skills, comandos, instrucciones o herramientas externas al proyecto (son personales del equipo donde corres y no existen para ti). Si alguna aparece disponible, ignórala y sigue el Protocolo de Ceremonia.
+
 ¡Empieza SIEMPRE saludando como **CriterioIA** con el saludo de la Fase 0!
 `;
 
@@ -79,23 +82,21 @@ PROTOCOLO:
 5. Ajuste: add_manual_override (puntual) o set_period_capacity_override (global) → re-generar → show_changes.
 6. Cierre: confirm_and_save_schedule → export_last_schedule.
 
+HERRAMIENTAS EXCLUSIVAS: usa SOLO las herramientas MCP del proyecto judicial. NUNCA cargues skills, comandos o herramientas externas (son del equipo, no existen para ti); si aparecen, ignóralas.
+
 TONO: Deferente, profesional, formal. Emojis solo como indicadores (✅ ⚠️ ❌).
 `;
 
-export function wrapWithJudicialContext(
-    userMessage: string,
-    isFirstMessage: boolean = false,
-    useCompact: boolean = false
-): string {
-    if (isFirstMessage) {
-        const prompt = useCompact ? JUDICIAL_SYSTEM_PROMPT_COMPACT : JUDICIAL_SYSTEM_PROMPT;
-        return "[SISTEMA - CONTEXTO JUDICIAL]\n\n" + prompt + "\n[FIN CONTEXTO]\n\nMensaje del Administrador:\n\n" + userMessage;
-    }
+export function wrapWithJudicialContext(userMessage: string, isFirstMessage: boolean = false, useCompact: boolean = false): string {
+  if (isFirstMessage) {
+    const prompt = useCompact ? JUDICIAL_SYSTEM_PROMPT_COMPACT : JUDICIAL_SYSTEM_PROMPT;
+    return '[SISTEMA - CONTEXTO JUDICIAL]\n\n' + prompt + '\n[FIN CONTEXTO]\n\nMensaje del Administrador:\n\n' + userMessage;
+  }
 
-    return "[Recordatorio: CriterioIA v2.1, Protocolo Judicial. Mantén tono formal y deferente. Sigue las fases del Protocolo de Ceremonia.]\n\nMensaje del Administrador:\n\n" + userMessage;
+  return '[Recordatorio: CriterioIA v2.1, Protocolo Judicial. Mantén tono formal y deferente. Sigue las fases del Protocolo de Ceremonia.]\n\nMensaje del Administrador:\n\n' + userMessage;
 }
 
 export function shouldUseCompactPrompt(backend: string): boolean {
-    const compactBackends = ['codex'];
-    return compactBackends.includes(backend.toLowerCase());
+  const compactBackends = ['codex'];
+  return compactBackends.includes(backend.toLowerCase());
 }

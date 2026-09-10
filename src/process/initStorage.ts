@@ -385,6 +385,27 @@ const ensureJudicialMcpServerSeeded = (existingServers: IMcpServer[]): IMcpServe
   return [...existingServers, seededServer];
 };
 
+/**
+ * CriterioIA: elimina del registro INTERNO mcp.config las entradas detectadas
+ * desde el opencode personal del equipo (`opencode_<nombre>`, via
+ * OpencodeMcpAgent contra `~/.config/opencode/opencode.json` real).
+ *
+ * Esas entradas son MCPs del administrador (ej. "codebase-memory"), no
+ * herramientas del proyecto, y sin esta limpieza seguirian inyectandose a las
+ * sesiones judiciales via session/new aunque la deteccion ya este aislada.
+ *
+ * ALCANCE: solo el registro propio de CriterioIA (su storage interno). El
+ * opencode.json del cliente NO se toca: sus MCPs personales siguen intactos
+ * en sus herramientas de programacion.
+ */
+const purgeHostOpencodeServers = (existingServers: IMcpServer[]): IMcpServer[] => {
+  const cleaned = existingServers.filter((server) => !server.id.startsWith('opencode_'));
+  if (cleaned.length !== existingServers.length) {
+    console.log(`[AionUi] Purged ${existingServers.length - cleaned.length} host-detected opencode MCP server(s) from internal registry`);
+  }
+  return cleaned;
+};
+
 const initStorage = async () => {
   console.log('[AionUi] Starting storage initialization...');
 
@@ -418,9 +439,11 @@ const initStorage = async () => {
     }
 
     // CriterioIA: asegurar la entrada del servidor judicial (idempotente, para usuarios nuevos y viejos)
-    const seededServers = ensureJudicialMcpServerSeeded(nextServers);
+    // y purgar servidores detectados del opencode personal del equipo (ver purgeHostOpencodeServers).
+    const purgedServers = purgeHostOpencodeServers(nextServers);
+    const seededServers = ensureJudicialMcpServerSeeded(purgedServers);
 
-    if (seededServers !== currentServers) {
+    if (seededServers.length !== currentServers.length || purgedServers.length !== nextServers.length) {
       await configFile.set('mcp.config', seededServers);
     }
   } catch (error) {

@@ -5,11 +5,11 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { homedir } from 'os';
 import { dirname, join } from 'path';
 import type { McpOperationResult } from '../McpProtocol';
 import { AbstractMcpAgent } from '../McpProtocol';
 import type { IMcpServer } from '../../../../common/storage';
+import { getOpencodeSandboxHome } from '../opencodeIsolation';
 
 /**
  * Config local de un servidor MCP tal como OpenCode lo guarda en opencode.json.
@@ -33,11 +33,16 @@ interface OpencodeConfig {
 /**
  * OpenCode MCP代理实现
  *
- * A diferencia de Claude/Qwen (que exponen `<cli> mcp add/list/remove`), no existe
- * un subcomando confirmado de OpenCode para gestionar su config MCP, así que este
- * agente lee/modifica/escribe directamente el archivo de configuración global de
- * OpenCode (~/.config/opencode/opencode.json), tocando únicamente la clave del
- * servidor que instala/remueve y dejando el resto del archivo intacto.
+ * CriterioIA: este agente opera SOBRE EL SANDBOX (`opencode-home`, ver
+ * opencodeIsolation.ts), NUNCA sobre el home real del usuario. Motivos:
+ *  1. Leer `~/.config/opencode/opencode.json` del equipo meteria los MCPs
+ *     personales del administrador (ej. "codebase-memory") al registro interno
+ *     mcp.config, y de ahi a las sesiones judiciales via session/new.
+ *  2. Escribir ahi contaminaria en sentido inverso las herramientas de
+ *     programacion del cliente con servidores de CriterioIA.
+ * El OpenCode hijo corre con el mismo sandbox como HOME, asi que lo que se
+ * instala desde Settings > MCP Management lo ve ese hijo nativamente, y el
+ * opencode personal del cliente queda 100% intacto (ni se lee ni se escribe).
  *
  * Nota: si el archivo tiene comentarios JSONC, se pierden al reescribir (JSON.parse/
  * stringify no los preserva). Aceptable porque sólo esta clase toca la clave "mcp".
@@ -52,7 +57,7 @@ export class OpencodeMcpAgent extends AbstractMcpAgent {
   }
 
   private getConfigPath(): string {
-    return join(homedir(), '.config', 'opencode', 'opencode.json');
+    return join(getOpencodeSandboxHome(), '.config', 'opencode', 'opencode.json');
   }
 
   private readConfig(): OpencodeConfig {

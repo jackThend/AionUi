@@ -14,6 +14,7 @@ import { ProcessConfig } from '@/process/initStorage';
 import { decryptSecret } from '@/process/secretStore';
 import type { IMcpServer } from '@/common/storage';
 import { getOpencodeProvider } from '@/common/opencodeProviders';
+import { OPENCODE_SANITIZED_ENV_VARS, getOpencodeSandboxEnv } from '@/process/services/mcpServices/opencodeIsolation';
 
 /**
  * CriterioIA: construye las variables de entorno del proveedor elegido en
@@ -21,6 +22,18 @@ import { getOpencodeProvider } from '@/common/opencodeProviders';
  * (config inline soportado nativamente por OpenCode, con precedencia sobre cualquier
  * archivo en disco) para declarar el proveedor + su API key + el modelo por defecto, sin
  * pasar por el flujo interactivo `opencode auth login`.
+ *
+ * AISLAMIENTO (ver opencodeIsolation.ts): SIEMPRE se devuelve el HOME aislado
+ * (sandbox), haya o no API key configurada. Sin esto, OpenCode cargaria las
+ * skills, comandos, MCPs e instrucciones (AGENTS.md) personales del equipo
+ * donde se instala CriterioIA. Las variables del proveedor solo se agregan
+ * cuando hay API key; el sandbox, nunca se omite.
+ *
+ * ADEMAS se declara `"permission": {"skill": {"*": "deny"}}` en el config
+ * inline: segunda capa de defensa (documentada en opencode.ai/docs/skills:
+ * "deny | Skill hidden from agent, access rejected"). Si en el futuro
+ * CriterioIA distribuye skills propias, se permite por nombre
+ * (ej. `"criterioia-*": "allow"`) sin abrir la puerta a las del usuario.
  *
  * IMPORTANTE: no alcanza con `{"model": "..."}`. OpenCode necesita el bloque
  * `provider.<id>.options.apiKey` para REGISTRAR el proveedor; sin eso el modelo no
@@ -30,16 +43,18 @@ import { getOpencodeProvider } from '@/common/opencodeProviders';
  * OPENCODE_PROVIDERS (anthropic/openai/deepseek/groq/xai/openrouter) coinciden con los
  * ids de proveedor de OpenCode. No se toca `~/.local/share/opencode/auth.json`.
  */
-async function buildOpencodeEnv(): Promise<Record<string, string> | undefined> {
+async function buildOpencodeEnv(): Promise<Record<string, string>> {
+  const sandboxEnv = getOpencodeSandboxEnv();
+
   const config = await ProcessConfig.get('app.opencodeConfig');
-  if (!config?.apiKey) return undefined;
+  if (!config?.apiKey) return { ...sandboxEnv };
   const provider = getOpencodeProvider(config.providerId);
-  if (!provider) return undefined;
+  if (!provider) return { ...sandboxEnv };
 
   // La key se guarda cifrada (safeStorage). Se descifra aquí, en memoria del proceso main,
   // solo para inyectarla en la variable de entorno del proceso hijo de OpenCode.
   const apiKey = decryptSecret(config.apiKey);
-  if (!apiKey) return undefined;
+  if (!apiKey) return { ...sandboxEnv };
 
   const model = config.model || provider.defaultModel;
   const opencodeConfig = {
@@ -51,9 +66,17 @@ async function buildOpencodeEnv(): Promise<Record<string, string> | undefined> {
       },
     },
     model,
+    // CriterioIA: el agente judicial no usa skills de ningun origen. Denegar
+    // globalmente es la forma nativa de ocultarlas al agente y rechazar su carga.
+    permission: {
+      skill: {
+        '*': 'deny',
+      },
+    },
   };
 
   return {
+    ...sandboxEnv,
     [provider.envVar]: apiKey,
     OPENCODE_CONFIG_CONTENT: JSON.stringify(opencodeConfig),
   };
@@ -140,6 +163,19 @@ export class AcpConnection {
   // 通用的后端连接方法
   private async connectGenericBackend(backend: 'gemini' | 'qwen' | 'iflow' | 'goose' | 'auggie' | 'kimi' | 'opencode' | 'custom', cliPath: string, workingDir: string, acpArgs?: string[], customEnv?: Record<string, string>): Promise<void> {
     const config = createGenericSpawnConfig(cliPath, workingDir, acpArgs, customEnv);
+    if (backend === 'opencode') {
+      // CriterioIA: el spread de process.env puede heredar OPENCODE_CONFIG /
+      // OPENCODE_CONFIG_DIR definidos por el usuario en su sesion, que apuntarian
+      // a la configuracion REAL de su equipo (con sus MCPs y skills). Se eliminan
+      // del hijo: CriterioIA le pasa todo via OPENCODE_CONFIG_CONTENT. Solo se
+      // borran del entorno del proceso hijo; la sesion del usuario no se toca.
+      const childEnv = config.options.env as Record<string, string | undefined> | undefined;
+      if (childEnv) {
+        for (const v of OPENCODE_SANITIZED_ENV_VARS) {
+          delete childEnv[v];
+        }
+      }
+    }
     this.child = spawn(config.command, config.args, config.options);
     await this.setupChildProcessHandlers(backend);
   }
