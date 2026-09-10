@@ -6,7 +6,6 @@ import ContextUsageIndicator from '@/renderer/components/ContextUsageIndicator';
 import FilePreview from '@/renderer/components/FilePreview';
 import HorizontalFileList from '@/renderer/components/HorizontalFileList';
 import SendBox from '@/renderer/components/sendbox';
-import ThoughtDisplay, { type ThoughtData } from '@/renderer/components/ThoughtDisplay';
 import { useGeminiGoogleAuthModels } from '@/renderer/hooks/useGeminiGoogleAuthModels';
 import { useLatestRef } from '@/renderer/hooks/useLatestRef';
 import { getSendBoxDraftHook, type FileOrFolderItem } from '@/renderer/hooks/useSendBoxDraft';
@@ -36,10 +35,6 @@ const useGeminiSendBoxDraft = getSendBoxDraftHook('gemini', {
 const useGeminiMessage = (conversation_id: string) => {
   const addOrUpdateMessage = useAddOrUpdateMessage();
   const [running, setRunning] = useState(false);
-  const [thought, setThought] = useState<ThoughtData>({
-    description: '',
-    subject: '',
-  });
   const [tokenUsage, setTokenUsage] = useState<TokenUsageData | null>(null);
 
   useEffect(() => {
@@ -49,16 +44,12 @@ const useGeminiMessage = (conversation_id: string) => {
       }
       // console.log('responseStream.message', message);
       switch (message.type) {
-        case 'thought':
-          setThought(message.data as ThoughtData);
-          break;
         case 'start':
           setRunning(true);
           break;
         case 'finish':
           {
             setRunning(false);
-            setThought({ subject: '', description: '' });
           }
           break;
         case 'finished':
@@ -104,7 +95,6 @@ const useGeminiMessage = (conversation_id: string) => {
 
   useEffect(() => {
     setRunning(false);
-    setThought({ subject: '', description: '' });
     setTokenUsage(null);
     void ipcBridge.conversation.get.invoke({ id: conversation_id }).then((res) => {
       if (!res) return;
@@ -122,7 +112,7 @@ const useGeminiMessage = (conversation_id: string) => {
     });
   }, [conversation_id]);
 
-  return { thought, setThought, running, tokenUsage };
+  return { running, tokenUsage };
 };
 
 const EMPTY_AT_PATH: Array<string | FileOrFolderItem> = [];
@@ -166,7 +156,7 @@ const GeminiSendBox: React.FC<{
   modelSelection: GeminiModelSelection;
 }> = ({ conversation_id, modelSelection }) => {
   const { t } = useTranslation();
-  const { thought, running, tokenUsage } = useGeminiMessage(conversation_id);
+  const { running, tokenUsage } = useGeminiMessage(conversation_id);
 
   const { atPath, uploadFile, setAtPath, setUploadFile, content, setContent } = useSendBoxDraft(conversation_id);
 
@@ -249,10 +239,8 @@ const GeminiSendBox: React.FC<{
 
   return (
     <div className='max-w-800px w-full mx-auto flex flex-col mt-auto mb-16px'>
-      <ThoughtDisplay thought={thought} />
-
       {/* 显示处理中提示 / Show processing indicator */}
-      {running && !thought.subject && <div className='text-left text-t-secondary text-14px py-8px'>{t('conversation.chat.processing')}</div>}
+      {running && <div className='text-left text-t-secondary text-14px py-8px'>{t('conversation.chat.processing')}</div>}
 
       <SendBox
         value={content}

@@ -5,7 +5,6 @@ import type { IResponseMessage } from '@/common/ipcBridge';
 import { uuid } from '@/common/utils';
 import SendBox from '@/renderer/components/sendbox';
 import ShimmerText from '@/renderer/components/ShimmerText';
-import ThoughtDisplay, { type ThoughtData } from '@/renderer/components/ThoughtDisplay';
 import { getSendBoxDraftHook, type FileOrFolderItem } from '@/renderer/hooks/useSendBoxDraft';
 import { createSetUploadFile, useSendBoxFiles } from '@/renderer/hooks/useSendBoxFiles';
 import { useAddOrUpdateMessage } from '@/renderer/messages/hooks';
@@ -32,10 +31,6 @@ const useAcpSendBoxDraft = getSendBoxDraftHook('acp', {
 const useAcpMessage = (conversation_id: string) => {
   const addOrUpdateMessage = useAddOrUpdateMessage();
   const [running, setRunning] = useState(false);
-  const [thought, setThought] = useState<ThoughtData>({
-    description: '',
-    subject: '',
-  });
   const [acpStatus, setAcpStatus] = useState<'connecting' | 'connected' | 'authenticated' | 'session_active' | 'disconnected' | 'error' | null>(null);
   const [aiProcessing, setAiProcessing] = useState(false); // New loading state for AI response
 
@@ -46,20 +41,14 @@ const useAcpMessage = (conversation_id: string) => {
       }
       const transformedMessage = transformMessage(message);
       switch (message.type) {
-        case 'thought':
-          setThought(message.data as ThoughtData);
-          break;
         case 'start':
           setRunning(true);
           break;
         case 'finish':
           setRunning(false);
           setAiProcessing(false);
-          setThought({ subject: '', description: '' });
           break;
         case 'content':
-          // Clear thought when final answer arrives
-          setThought({ subject: '', description: '' });
           addOrUpdateMessage(transformedMessage);
           break;
         case 'agent_status': {
@@ -94,7 +83,7 @@ const useAcpMessage = (conversation_id: string) => {
           break;
       }
     },
-    [conversation_id, addOrUpdateMessage, setThought, setRunning, setAiProcessing, setAcpStatus]
+    [conversation_id, addOrUpdateMessage, setRunning, setAiProcessing, setAcpStatus]
   );
 
   useEffect(() => {
@@ -104,12 +93,11 @@ const useAcpMessage = (conversation_id: string) => {
   // Reset state when conversation changes
   useEffect(() => {
     setRunning(false);
-    setThought({ subject: '', description: '' });
     setAcpStatus(null);
     setAiProcessing(false);
   }, [conversation_id]);
 
-  return { thought, setThought, running, acpStatus, aiProcessing, setAiProcessing };
+  return { running, acpStatus, aiProcessing, setAiProcessing };
 };
 
 const EMPTY_AT_PATH: Array<string | FileOrFolderItem> = [];
@@ -151,7 +139,7 @@ const AcpSendBox: React.FC<{
   conversation_id: string;
   backend: AcpBackend;
 }> = ({ conversation_id, backend }) => {
-  const { thought, running, acpStatus, aiProcessing, setAiProcessing } = useAcpMessage(conversation_id);
+  const { running, acpStatus, aiProcessing, setAiProcessing } = useAcpMessage(conversation_id);
   const { t } = useTranslation();
   const { atPath, uploadFile, setAtPath, setUploadFile, content, setContent } = useSendBoxDraft(conversation_id);
   const { setSendBoxHandler } = usePreviewContext();
@@ -329,8 +317,6 @@ const AcpSendBox: React.FC<{
 
   return (
     <div className='max-w-800px w-full mx-auto flex flex-col mt-auto mb-16px'>
-      <ThoughtDisplay thought={thought} />
-
       {/* 显示处理中提示 / Show processing indicator */}
       {aiProcessing && (
         <div className='text-left text-14px py-8px'>

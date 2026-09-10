@@ -14,7 +14,6 @@ import { iconColors } from '@/renderer/theme/colors';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ShimmerText from '@renderer/components/ShimmerText';
-import ThoughtDisplay, { type ThoughtData } from '@/renderer/components/ThoughtDisplay';
 import FilePreview from '@/renderer/components/FilePreview';
 import HorizontalFileList from '@/renderer/components/HorizontalFileList';
 import { usePreviewContext } from '@/renderer/pages/conversation/preview';
@@ -42,10 +41,6 @@ const CodexSendBox: React.FC<{ conversation_id: string }> = ({ conversation_id }
   const [running, setRunning] = useState(false);
   const [aiProcessing, setAiProcessing] = useState(false); // New loading state for AI response
   const [codexStatus, setCodexStatus] = useState<string | null>(null);
-  const [thought, setThought] = useState<ThoughtData>({
-    description: '',
-    subject: '',
-  });
 
   const { content, setContent, atPath, setAtPath, uploadFile, setUploadFile } = (function useDraft() {
     const { data, mutate } = useCodexSendBoxDraft(conversation_id);
@@ -74,7 +69,6 @@ const CodexSendBox: React.FC<{ conversation_id: string }> = ({ conversation_id }
     setRunning(false);
     setAiProcessing(false);
     setCodexStatus(null);
-    setThought({ subject: '', description: '' });
   }, [conversation_id]);
 
   // 注册预览面板添加到发送框的 handler
@@ -98,16 +92,11 @@ const CodexSendBox: React.FC<{ conversation_id: string }> = ({ conversation_id }
       // All messages from Backend are already persisted via emitAndPersistMessage
       // Frontend only needs to update UI
       switch (message.type) {
-        case 'thought':
-          setThought(message.data as ThoughtData);
-          break;
         case 'finish':
-          setThought(message.data as ThoughtData);
           setAiProcessing(false);
           break;
         case 'content':
         case 'codex_permission': {
-          setThought({ subject: '', description: '' });
           const transformedMessage = transformMessage(message);
           if (transformedMessage) {
             addOrUpdateMessage(transformedMessage);
@@ -125,7 +114,6 @@ const CodexSendBox: React.FC<{ conversation_id: string }> = ({ conversation_id }
         }
         default: {
           setRunning(false);
-          setThought({ subject: '', description: '' });
           const transformedMessage = transformMessage(message);
           if (transformedMessage) {
             addOrUpdateMessage(transformedMessage);
@@ -288,12 +276,10 @@ const CodexSendBox: React.FC<{ conversation_id: string }> = ({ conversation_id }
     };
   }, [conversation_id, codexStatus, addOrUpdateMessage]);
 
-  const showProcessingHint = (aiProcessing || running) && !thought.subject;
+  const showProcessingHint = aiProcessing || running;
 
   return (
     <div className='max-w-800px w-full mx-auto flex flex-col mt-auto mb-16px'>
-      <ThoughtDisplay thought={thought} />
-
       {/* 显示处理中提示 / Show processing indicator */}
       {showProcessingHint && <div className='text-left text-t-secondary text-14px py-8px'>{aiProcessing ? <ShimmerText duration={2}>{t('conversation.chat.processing')}</ShimmerText> : t('conversation.chat.processing')}</div>}
       <SendBox

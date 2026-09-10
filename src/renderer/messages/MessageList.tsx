@@ -77,12 +77,16 @@ const MessageList: React.FC<{ className?: string }> = () => {
   const previousListLengthRef = useRef(list.length);
   const { t } = useTranslation();
 
+  // Hide tool calls, agent status, and permission messages - show only text responses
+  const hiddenMessageTypes = useMemo(() => new Set(['tool_call', 'tool_group', 'agent_status', 'acp_permission', 'acp_tool_call', 'codex_permission', 'codex_tool_call']), []);
+
   // 提取所有 Codex turn_diff 消息用于汇总显示 / Extract all Codex turn_diff messages for summary display
   const { turnDiffMessages, firstTurnDiffIndex } = useMemo(() => {
     const turnDiffs: TurnDiffContent[] = [];
     let firstIndex = -1;
 
     list.forEach((message, index) => {
+      if (hiddenMessageTypes.has(message.type)) return;
       // Codex turn_diff 消息 / Codex turn_diff messages
       if (message.type === 'codex_tool_call' && message.content.subtype === 'turn_diff') {
         if (firstIndex === -1) firstIndex = index;
@@ -91,7 +95,7 @@ const MessageList: React.FC<{ className?: string }> = () => {
     });
 
     return { turnDiffMessages: turnDiffs, firstTurnDiffIndex: firstIndex };
-  }, [list]);
+  }, [list, hiddenMessageTypes]);
 
   // 判断消息是否为 turn_diff 类型（用于跳过单独渲染）/ Check if message is turn_diff type (for skipping individual render)
   const isTurnDiffMessage = (message: TMessage) => {
@@ -169,6 +173,11 @@ const MessageList: React.FC<{ className?: string }> = () => {
         <Image.PreviewGroup actionsLayout={['zoomIn', 'zoomOut', 'originalSize', 'rotateLeft', 'rotateRight']}>
           <ImagePreviewContext.Provider value={{ inPreviewGroup: true }}>
             {list.map((message, index) => {
+              // Hide tool calls, agent status, permissions - show only text responses
+              if (hiddenMessageTypes.has(message.type)) {
+                return null;
+              }
+
               // 跳过 Codex turn_diff 消息的单独渲染（除了第一个位置显示汇总）
               // Skip individual Codex turn_diff message rendering (show summary at first position)
               if (isTurnDiffMessage(message)) {
