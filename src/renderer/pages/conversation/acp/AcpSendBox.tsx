@@ -153,6 +153,21 @@ const AcpSendBox: React.FC<{
   const addOrUpdateMessage = useAddOrUpdateMessage(); // Move this here so it's available in useEffect
   const addOrUpdateMessageRef = useLatestRef(addOrUpdateMessage);
 
+  // CriterioIA: contador de espera minimo. El TTFT del proveedor (gateway +
+  // modelo con ~9k tokens de tools) deja un hueco silencioso tras ocultar la
+  // actividad intermedia; mostrar los segundos transcurridos da senal de vida
+  // sin reintroducir ruido tecnico. Solo aparece si supera los 2s.
+  const [waitSecs, setWaitSecs] = useState(0);
+  useEffect(() => {
+    if (!aiProcessing) {
+      setWaitSecs(0);
+      return;
+    }
+    setWaitSecs(0);
+    const timer = setInterval(() => setWaitSecs((s) => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, [aiProcessing]);
+
   // 使用共享的文件处理逻辑
   const { handleFilesAdded, processMessageWithFiles, clearFiles } = useSendBoxFiles({
     atPath,
@@ -321,6 +336,7 @@ const AcpSendBox: React.FC<{
       {aiProcessing && (
         <div className='text-left text-14px py-8px'>
           <ShimmerText duration={2}>{t('conversation.chat.processing')}</ShimmerText>
+          {waitSecs > 2 && <span className='text-t-secondary ml-8px'>· {waitSecs}s</span>}
         </div>
       )}
 
